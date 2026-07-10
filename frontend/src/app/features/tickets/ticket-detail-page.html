@@ -388,6 +388,80 @@
         </ul>
       </section>
       <section class="content-panel">
+        <h2>{{ i18n.language() === 'French' ? 'Connaissances liées' : 'Linked knowledge' }}</h2>
+        <ul class="attachment-list">
+          @for (article of knowledge(); track article.id) {
+            <li>
+              <strong>{{
+                i18n.language() === 'French' ? article.titleFrench : article.titleEnglish
+              }}</strong
+              ><p-tag [value]="article.status" />
+            </li>
+          } @empty {
+            <li class="state-message">{{ i18n.text('common.empty') }}</li>
+          }
+        </ul>
+        @if (store.canMaintainProject(item.projectId)) {
+          <div class="relationship-form">
+            <input
+              pInputText
+              [(ngModel)]="knowledgeArticleId"
+              [placeholder]="i18n.language() === 'French' ? 'ID article' : 'Article ID'"
+            /><button pButton type="button" size="small" (click)="linkArticle()">
+              {{ i18n.language() === 'French' ? 'Lier' : 'Link' }}
+            </button>
+          </div>
+        }
+      </section>
+      @if (store.canMaintainProject(item.projectId)) {
+        <section class="content-panel">
+          <h2>{{ i18n.language() === 'French' ? 'Brouillons assistés' : 'Assisted drafts' }}</h2>
+          <p class="state-message">
+            {{
+              i18n.language() === 'French'
+                ? "Facultatif, minimisé et toujours soumis à une révision humaine. Aucun contenu n'est appliqué automatiquement."
+                : 'Optional, data-minimized, and always human-reviewed. No output is applied automatically.'
+            }}
+          </p>
+          <div class="relationship-form">
+            <p-select [(ngModel)]="aiKind" [options]="aiKinds" ariaLabel="Assistance type" /><button
+              pButton
+              type="button"
+              size="small"
+              (click)="createAiDraft()"
+            >
+              {{ i18n.language() === 'French' ? 'Créer un brouillon' : 'Create draft' }}
+            </button>
+          </div>
+          <ul class="attachment-list">
+            @for (draft of aiDrafts(); track draft.id) {
+              <li>
+                <div>
+                  <strong>{{ draft.kind }} · {{ draft.status }}</strong
+                  ><small>{{ draft.evaluationScore * 100 | number: '1.0-0' }}% evaluation</small>
+                  <p>{{ draft.draftOutput }}</p>
+                </div>
+                @if (draft.status === 'Draft') {
+                  <div class="attachment-actions">
+                    <button pButton type="button" size="small" (click)="reviewAiDraft(draft, true)">
+                      {{ i18n.language() === 'French' ? 'Accepter' : 'Accept' }}</button
+                    ><button
+                      pButton
+                      type="button"
+                      size="small"
+                      severity="secondary"
+                      (click)="reviewAiDraft(draft, false)"
+                    >
+                      {{ i18n.language() === 'French' ? 'Rejeter' : 'Reject' }}
+                    </button>
+                  </div>
+                }
+              </li>
+            }
+          </ul>
+        </section>
+      }
+      <section class="content-panel">
         <h2>{{ i18n.text('tickets.activity') }}</h2>
         <ol class="activity-list">
           @for (event of activity().slice(0, 20); track event.id) {

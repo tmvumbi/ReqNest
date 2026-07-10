@@ -23,6 +23,8 @@ import {
   TicketType,
   Workflow,
   WorkflowStatus,
+  AiAssistance,
+  KnowledgeArticle,
 } from '../../core/api/api-models';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
@@ -62,6 +64,8 @@ export class TicketDetailPage {
   readonly activity = signal<TicketActivity[]>([]);
   readonly attachments = signal<TicketAttachment[]>([]);
   readonly relationships = signal<TicketRelationship[]>([]);
+  readonly aiDrafts = signal<AiAssistance[]>([]);
+  readonly knowledge = signal<KnowledgeArticle[]>([]);
   readonly members = signal<Member[]>([]);
   readonly editVisible = signal(false);
   readonly saving = signal(false);
@@ -71,6 +75,9 @@ export class TicketDetailPage {
   readonly error = signal(false);
   relationshipTargetId = '';
   relationshipType: TicketRelationship['type'] = 'RelatesTo';
+  aiKind: AiAssistance['kind'] = 'Summarize';
+  knowledgeArticleId = '';
+  readonly aiKinds: AiAssistance['kind'][] = ['Summarize', 'SuggestReply', 'Classify'];
   readonly relationshipTypes: TicketRelationship['type'][] = ['RelatesTo', 'Duplicates', 'Blocks'];
   readonly commentForm = this.formBuilder.nonNullable.group({
     body: ['', Validators.required],
@@ -290,6 +297,27 @@ export class TicketDetailPage {
     await this.refreshTicket();
   }
 
+  async createAiDraft(): Promise<void> {
+    try {
+      await firstValueFrom(this.api.createAiAssistance(this.ticketId, this.aiKind));
+      this.aiDrafts.set(await firstValueFrom(this.api.aiAssistance(this.ticketId)));
+    } catch {
+      this.error.set(true);
+    }
+  }
+
+  async reviewAiDraft(item: AiAssistance, accept: boolean): Promise<void> {
+    await firstValueFrom(this.api.reviewAiAssistance(this.ticketId, item.id, accept));
+    this.aiDrafts.set(await firstValueFrom(this.api.aiAssistance(this.ticketId)));
+  }
+
+  async linkArticle(): Promise<void> {
+    if (!this.knowledgeArticleId) return;
+    await firstValueFrom(this.api.linkKnowledge(this.ticketId, this.knowledgeArticleId));
+    this.knowledge.set(await firstValueFrom(this.api.ticketKnowledge(this.ticketId)));
+    this.knowledgeArticleId = '';
+  }
+
   isWatching(item: TicketDetail): boolean {
     return item.watchers.some((watcher) => watcher.userId === this.store.session()?.userId);
   }
@@ -321,16 +349,27 @@ export class TicketDetailPage {
 
   private async load(): Promise<void> {
     try {
-      const [ticket, workflows, comments, activity, attachments, members, relationships] =
-        await Promise.all([
-          firstValueFrom(this.api.ticket(this.ticketId)),
-          firstValueFrom(this.api.workflows()),
-          firstValueFrom(this.api.comments(this.ticketId)),
-          firstValueFrom(this.api.activity(this.ticketId)),
-          firstValueFrom(this.api.attachments(this.ticketId)),
-          firstValueFrom(this.api.members()).catch(() => []),
-          firstValueFrom(this.api.relationships(this.ticketId)),
-        ]);
+      const [
+        ticket,
+        workflows,
+        comments,
+        activity,
+        attachments,
+        members,
+        relationships,
+        aiDrafts,
+        knowledge,
+      ] = await Promise.all([
+        firstValueFrom(this.api.ticket(this.ticketId)),
+        firstValueFrom(this.api.workflows()),
+        firstValueFrom(this.api.comments(this.ticketId)),
+        firstValueFrom(this.api.activity(this.ticketId)),
+        firstValueFrom(this.api.attachments(this.ticketId)),
+        firstValueFrom(this.api.members()).catch(() => []),
+        firstValueFrom(this.api.relationships(this.ticketId)),
+        firstValueFrom(this.api.aiAssistance(this.ticketId)).catch(() => []),
+        firstValueFrom(this.api.ticketKnowledge(this.ticketId)),
+      ]);
       this.ticket.set(ticket);
       this.workflow.set(
         workflows.find((item) => item.statuses.some((status) => status.id === ticket.statusId)) ??
@@ -341,6 +380,8 @@ export class TicketDetailPage {
       this.attachments.set(attachments);
       this.members.set(members);
       this.relationships.set(relationships);
+      this.aiDrafts.set(aiDrafts);
+      this.knowledge.set(knowledge);
     } catch {
       this.error.set(true);
     } finally {

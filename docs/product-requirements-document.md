@@ -71,7 +71,9 @@ ReqNest will provide a single source of truth with clear permissions, a useful d
 - A manager can generate a filtered, branded PDF report without exporting data to another tool.
 - No user can access another tenant’s records or an out-of-scope project through either the interface or API.
 
-## 5. Non-goals for the first release
+## 5. Original Phase 1 non-goals
+
+The following items were intentionally excluded from the first core-help-desk phase. Phase 3 subsequently delivered the requester portal, email ingestion, integration boundaries, opt-in AI assistance, and knowledge-base capabilities described below; the remaining items are still out of scope.
 
 - A public, anonymous customer support portal.
 - Email-to-ticket ingestion and two-way email conversation synchronization.
@@ -84,7 +86,7 @@ ReqNest will provide a single source of truth with clear permissions, a useful d
 - A full knowledge-base authoring and publishing system.
 - Cross-tenant ticket sharing.
 
-These are candidates for later phases and should not be precluded by the initial design.
+Items not marked as delivered above remain candidates for later phases and should not be precluded by the design.
 
 ## 6. Product principles
 
@@ -119,7 +121,7 @@ Has read access to permitted projects and can add comments, mentions, and option
 
 ### 7.5 Requester/reporter
 
-The authenticated user who creates or reports a ticket. In the initial release, reporters are tenant users. External requesters and public ticket submission are future capabilities.
+The person who creates or reports a ticket. Reporters may be authenticated tenant users or external requesters using an enabled project portal or verified inbound-email channel. External requesters can access only the ticket associated with their high-entropy private access token and cannot enumerate tenant data.
 
 ## 8. Multi-tenant model
 
@@ -900,12 +902,12 @@ Analytics must not capture ticket descriptions, comment bodies, filenames, passw
 - Attachment previews and operational storage quotas.
 - Expanded audit export and retention controls.
 
-### Phase 3 — Integrations and external service
+### Phase 3 — Integrations and external service (delivered)
 
 - Public/requester portal.
 - Email-to-ticket and reply synchronization.
 - Webhooks and API tokens.
-- Single sign-on and multi-factor authentication.
+- OIDC single sign-on using authorization code with PKCE, explicit account linking, and one-time application exchanges. Multi-factor authentication is not part of this product.
 - Knowledge base and suggested articles.
 - Third-party integrations.
 - Optional AI assistance subject to privacy, evaluation, and human-review requirements.

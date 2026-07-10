@@ -39,6 +39,18 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'portal/:tenantId',
+    loadComponent: () =>
+      import('./features/public/requester-portal/requester-portal-page').then(
+        (module) => module.RequesterPortalPage,
+      ),
+  },
+  {
+    path: 'auth/sso',
+    loadComponent: () =>
+      import('./features/auth/sso-page/sso-page').then((module) => module.SsoPage),
+  },
+  {
     path: 'accept-invitation',
     data: { mode: 'invitation' },
     loadComponent: () =>
@@ -83,6 +95,11 @@ export const routes: Routes = [
           import('./features/reports/reports-page').then((module) => module.ReportsPage),
       },
       {
+        path: 'knowledge',
+        loadComponent: () =>
+          import('./features/knowledge/knowledge-page').then((module) => module.KnowledgePage),
+      },
+      {
         path: 'notifications',
         loadComponent: () =>
           import('./features/notifications/notifications-page').then(
@@ -109,6 +126,14 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/admin/operations/operations-page').then(
             (module) => module.OperationsPage,
+          ),
+      },
+      {
+        path: 'admin/integrations',
+        canActivate: [tenantAdministratorGuard],
+        loadComponent: () =>
+          import('./features/admin/integrations/integrations-page').then(
+            (module) => module.IntegrationsPage,
           ),
       },
       {

@@ -1,0 +1,133 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  background: var(--app-background);
+}
+.portal {
+  width: min(1180px, calc(100% - 2rem));
+  margin: auto;
+  padding-bottom: 5rem;
+}
+header {
+  min-height: 5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: var(--app-text);
+  font-weight: 800;
+  text-decoration: none;
+}
+.brand span {
+  display: grid;
+  width: 2.2rem;
+  height: 2.2rem;
+  place-items: center;
+  border-radius: 0.7rem;
+  background: var(--portal-accent);
+  color: white;
+}
+.hero {
+  max-width: 52rem;
+  padding: clamp(3rem, 8vw, 7rem) 0;
+}
+.hero h1 {
+  margin: 0 0 1rem;
+  font-size: clamp(3rem, 8vw, 6rem);
+  line-height: 0.95;
+  letter-spacing: -0.06em;
+}
+.hero > p:last-child {
+  color: var(--app-text-muted);
+  font-size: 1.15rem;
+  line-height: 1.7;
+}
+.grid {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+.form,
+label {
+  display: grid;
+  gap: 0.5rem;
+}
+.form {
+  gap: 1rem;
+}
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+input,
+textarea,
+p-select {
+  width: 100%;
+}
+.ticket {
+  margin-top: 1.5rem;
+  border-top: 1px solid var(--app-border);
+  padding-top: 1.5rem;
+}
+.ticket > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  color: var(--portal-accent);
+}
+.ticket ol {
+  padding: 0;
+  list-style: none;
+}
+.ticket li {
+  border-top: 1px solid var(--app-border);
+  padding: 1rem 0;
+}
+.ticket time {
+  color: var(--app-text-muted);
+  font-size: 0.8rem;
+}
+.knowledge {
+  padding-top: 5rem;
+}
+.section-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 1rem;
+}
+.section-title h2 {
+  margin: 0;
+  font-size: 2rem;
+}
+.articles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+.articles article {
+  padding: 1.25rem;
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  background: var(--app-surface);
+}
+.articles h3 {
+  margin-top: 0;
+}
+@media (max-width: 780px) {
+  .grid,
+  .split,
+  .articles {
+    grid-template-columns: 1fr;
+  }
+  .section-title {
+    align-items: start;
+    flex-direction: column;
+  }
+}

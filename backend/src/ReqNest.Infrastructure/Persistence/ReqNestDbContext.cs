@@ -3,6 +3,7 @@ using ReqNest.Core.Auditing;
 using ReqNest.Core.Common;
 using ReqNest.Core.Configuration;
 using ReqNest.Core.Identity;
+using ReqNest.Core.Integrations;
 using ReqNest.Core.Notifications;
 using ReqNest.Core.Reports;
 using ReqNest.Core.Tenancy;
@@ -83,6 +84,38 @@ public sealed class ReqNestDbContext(
 
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
 
+    public DbSet<RequesterIdentity> RequesterIdentities => Set<RequesterIdentity>();
+
+    public DbSet<RequesterTicketAccess> RequesterTicketAccesses => Set<RequesterTicketAccess>();
+
+    public DbSet<RequesterComment> RequesterComments => Set<RequesterComment>();
+
+    public DbSet<InboundEmailChannel> InboundEmailChannels => Set<InboundEmailChannel>();
+
+    public DbSet<InboundEmailMessage> InboundEmailMessages => Set<InboundEmailMessage>();
+
+    public DbSet<ApiToken> ApiTokens => Set<ApiToken>();
+
+    public DbSet<WebhookSubscription> WebhookSubscriptions => Set<WebhookSubscription>();
+
+    public DbSet<WebhookDelivery> WebhookDeliveries => Set<WebhookDelivery>();
+
+    public DbSet<TenantSsoConfiguration> TenantSsoConfigurations => Set<TenantSsoConfiguration>();
+
+    public DbSet<ExternalIdentityLink> ExternalIdentityLinks => Set<ExternalIdentityLink>();
+
+    public DbSet<SsoAuthenticationExchange> SsoAuthenticationExchanges => Set<SsoAuthenticationExchange>();
+
+    public DbSet<KnowledgeArticle> KnowledgeArticles => Set<KnowledgeArticle>();
+
+    public DbSet<TicketKnowledgeArticle> TicketKnowledgeArticles => Set<TicketKnowledgeArticle>();
+
+    public DbSet<IntegrationConnection> IntegrationConnections => Set<IntegrationConnection>();
+
+    public DbSet<AiTenantConfiguration> AiTenantConfigurations => Set<AiTenantConfiguration>();
+
+    public DbSet<AiAssistanceRequest> AiAssistanceRequests => Set<AiAssistanceRequest>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ReqNestDbContext).Assembly);
@@ -150,6 +183,38 @@ public sealed class ReqNestDbContext(
         modelBuilder.Entity<ReportSchedule>().HasQueryFilter(entity =>
             tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
         modelBuilder.Entity<AuditEvent>().HasQueryFilter(entity =>
+            tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
+        modelBuilder.Entity<RequesterIdentity>().HasQueryFilter(entity =>
+            tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
+        modelBuilder.Entity<RequesterTicketAccess>().HasQueryFilter(entity =>
+            tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
+        modelBuilder.Entity<RequesterComment>().HasQueryFilter(entity =>
+            tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
+        modelBuilder.Entity<InboundEmailChannel>().HasQueryFilter(entity =>
+            tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
+        modelBuilder.Entity<InboundEmailMessage>().HasQueryFilter(entity =>
+            tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
+        modelBuilder.Entity<ApiToken>().HasQueryFilter(entity =>
+            tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
+        modelBuilder.Entity<WebhookSubscription>().HasQueryFilter(entity =>
+            tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
+        modelBuilder.Entity<WebhookDelivery>().HasQueryFilter(entity =>
+            tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
+        modelBuilder.Entity<TenantSsoConfiguration>().HasQueryFilter(entity =>
+            tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
+        modelBuilder.Entity<ExternalIdentityLink>().HasQueryFilter(entity =>
+            tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
+        modelBuilder.Entity<SsoAuthenticationExchange>().HasQueryFilter(entity =>
+            tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
+        modelBuilder.Entity<KnowledgeArticle>().HasQueryFilter(entity =>
+            tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
+        modelBuilder.Entity<TicketKnowledgeArticle>().HasQueryFilter(entity =>
+            tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
+        modelBuilder.Entity<IntegrationConnection>().HasQueryFilter(entity =>
+            tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
+        modelBuilder.Entity<AiTenantConfiguration>().HasQueryFilter(entity =>
+            tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
+        modelBuilder.Entity<AiAssistanceRequest>().HasQueryFilter(entity =>
             tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
     }
 

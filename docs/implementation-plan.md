@@ -63,13 +63,22 @@ Status legend: `done`, `in progress`, `planned`.
 
 | Capability | Required evidence | Status |
 | --- | --- | --- |
-| Requester portal | Tenant-branded external submission/status/comment experience with strict visibility | planned |
-| Email-to-ticket | Verified routing, threading, reply synchronization, attachment validation and loop prevention | planned |
-| Webhooks and API tokens | Scoped tokens, rotation/revocation, signed retryable webhooks and delivery logs | planned |
-| SSO and MFA | Tenant OIDC configuration, account linking, recovery and step-up controls | planned |
-| Knowledge base | Localized articles, permissions, search, ticket linking and requester presentation | planned |
-| Third-party integrations | Secure connector boundary, tenant-scoped credentials and observable retry behavior | planned |
-| Optional AI assistance | Explicit opt-in, data-minimization, evaluations, human review and non-training guarantees | planned |
+| Requester portal | Tenant-branded external submission/status/comment experience with strict visibility | done |
+| Email-to-ticket | Verified routing, threading, reply synchronization, attachment validation, quota enforcement and loop prevention | done |
+| Webhooks and API tokens | Scoped tokens, rotation/revocation, signed retryable webhooks and delivery logs | done |
+| SSO | Tenant OIDC configuration, authorization-code/PKCE sign-in, exact account linking and one-time exchange | done |
+| Knowledge base | Localized articles, permissions, search, ticket linking and requester presentation | done |
+| Third-party integrations | Secure connector boundary, tenant-scoped credentials and observable retry behavior | done |
+| Optional AI assistance | Explicit opt-in, data-minimization, evaluations, human review and non-training guarantees | done |
+
+### Phase 3 completion evidence — 2026-07-11
+
+- The `ExternalServiceIntegrations` migration applies cleanly to the existing local database and disposable test databases, backfills reporter snapshots, and leaves no pending EF Core model changes. External requester identities, comments, email channels/messages, scoped API tokens, signed webhooks/deliveries, OIDC configuration/exchanges, knowledge articles, connector health state, and AI review records are tenant-filtered and relationally constrained.
+- The backend suite runs **14/14 passing**. `PhaseThreeExternalServiceTests.cs` covers branded requester discovery, anonymous ticket creation and secure token access, requester comments, email secret verification/deduplication/threading, validated attachments, scoped API-token authorization and revocation, signed webhook delivery records, localized knowledge publication/search/linking, encrypted integration configuration, OIDC safeguards, and the opt-in/non-training/human-review AI boundary.
+- Email ingestion rejects automated loops, invalid signatures/types/encodings, over-size files, and tenant-quota overflow. Webhook and connector workers use bounded retry/backoff with observable outcomes, reject private-network destinations, and stop cleanly on application cancellation. Secrets are hashed or protected at rest and returned only at creation where applicable.
+- Angular unit/component tests run **6/6 passing**; Angular ESLint, Prettier, and the production build pass. The initial production bundle remains below the configured 500 kB warning budget. The frontend includes a localized requester portal, knowledge authoring, OIDC entry, portal/inbound-email/API-token/webhook/connector administration, and explicitly safeguarded AI drafts with mandatory accept/reject review.
+- Browser journeys created a project, enabled its branded portal, enabled the two explicit AI safeguards, authored and published a bilingual knowledge article, submitted anonymous request `HELP-1`, viewed its `TODO` status through its private token, and added a requester-visible reply. English/French and explicit light/dark modes were checked on the public portal; the final browser console contained no warnings or errors.
+- Multi-factor authentication is intentionally **out of scope** by product decision. Phase 3 implements OIDC SSO without MFA, recovery codes, step-up challenges, or MFA persistence.
 
 ## Phase completion gates
 

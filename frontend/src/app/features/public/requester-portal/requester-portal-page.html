@@ -1,0 +1,157 @@
+<main class="portal" [style.--portal-accent]="portal()?.primaryColor || '#2563eb'">
+  <header>
+    <a href="/" class="brand"
+      ><span>{{ portal()?.companyShortName || 'R' }}</span
+      >{{ portal()?.companyName || 'ReqNest' }}</a
+    >
+    <div>
+      <button pButton type="button" [text]="true" (click)="toggleLanguage()">
+        {{ i18n.language() === 'English' ? 'FR' : 'EN' }}</button
+      ><button pButton type="button" [text]="true" (click)="toggleTheme()">
+        {{ theme.darkActive() ? '☀' : '☾' }}
+      </button>
+    </div>
+  </header>
+  @if (loading()) {
+    <p>{{ text('Loading portal…', 'Chargement du portail…') }}</p>
+  }
+  @if (error()) {
+    <p-message severity="error">{{ error() }}</p-message>
+  }
+  @if (portal(); as item) {
+    <section class="hero">
+      <p class="eyebrow">{{ text('REQUESTER PORTAL', 'PORTAIL DEMANDEUR') }}</p>
+      <h1>{{ text('How can we help?', 'Comment pouvons-nous aider ?') }}</h1>
+      <p>
+        {{
+          text(
+            item.introductionEnglish ||
+              'Submit and follow your support requests in one secure place.',
+            item.introductionFrench || 'Soumettez et suivez vos demandes dans un espace sécurisé.'
+          )
+        }}
+      </p>
+    </section>
+    <div class="grid">
+      <p-card [header]="text('Submit a request', 'Soumettre une demande')">
+        <form (ngSubmit)="submit()" class="form">
+          <label for="portalProject">{{ text('Project', 'Projet') }}</label
+          ><p-select
+            inputId="portalProject"
+            [(ngModel)]="projectId"
+            name="project"
+            [options]="item.projects"
+            optionValue="id"
+            [optionLabel]="i18n.language() === 'French' ? 'nameFrench' : 'nameEnglish'"
+          />
+          <div class="split">
+            <label
+              >{{ text('Your name', 'Votre nom')
+              }}<input pInputText [(ngModel)]="displayName" name="name" required /></label
+            ><label
+              >{{ text('Email address', 'Adresse e-mail')
+              }}<input pInputText type="email" [(ngModel)]="email" name="email" required
+            /></label>
+          </div>
+          <label
+            >{{ text('Title', 'Titre')
+            }}<input pInputText [(ngModel)]="title" name="title" required
+          /></label>
+          <label
+            >{{ text('Description', 'Description')
+            }}<textarea
+              pTextarea
+              [(ngModel)]="description"
+              name="description"
+              rows="7"
+              required
+            ></textarea>
+          </label>
+          <button pButton type="submit" [loading]="busy()">
+            {{ text('Submit securely', 'Soumettre en toute sécurité') }}
+          </button>
+        </form>
+        @if (createdKey()) {
+          <p-message severity="success"
+            >{{ text('Request created:', 'Demande créée :') }} {{ createdKey() }}.
+            {{
+              text(
+                'Keep the access token below private.',
+                "Gardez le jeton d'accès ci-dessous privé."
+              )
+            }}</p-message
+          >
+        }
+      </p-card>
+      <p-card [header]="text('Track a request', 'Suivre une demande')">
+        <form (ngSubmit)="lookup()" class="form">
+          <label
+            >{{ text('Ticket ID', 'ID du ticket')
+            }}<input pInputText [(ngModel)]="lookupTicketId" name="ticketId" /></label
+          ><label
+            >{{ text('Private access token', "Jeton d'accès privé")
+            }}<input pInputText [(ngModel)]="lookupToken" name="token" /></label
+          ><button pButton type="submit" severity="secondary">
+            {{ text('View status', 'Voir le statut') }}
+          </button>
+        </form>
+        @if (ticket(); as result) {
+          <article class="ticket">
+            <div>
+              <span>{{ result.ticket.key }}</span
+              ><strong>{{ text(result.ticket.statusEnglish, result.ticket.statusFrench) }}</strong>
+            </div>
+            <h2>{{ result.ticket.title }}</h2>
+            <div class="rich-content" [innerHTML]="result.ticket.description"></div>
+            <ol>
+              @for (comment of result.comments; track comment.id) {
+                <li>
+                  <strong>{{ comment.authorName }}</strong>
+                  <div class="rich-content" [innerHTML]="comment.body"></div>
+                  <time>{{ comment.createdAt | localizedDate: 'short' }}</time>
+                </li>
+              }
+            </ol>
+            <form (ngSubmit)="addReply()" class="form">
+              <label
+                >{{ text('Add a reply', 'Ajouter une réponse')
+                }}<textarea pTextarea [(ngModel)]="reply" name="reply" rows="3"></textarea></label
+              ><button pButton type="submit">{{ text('Send reply', 'Envoyer') }}</button>
+            </form>
+          </article>
+        }
+      </p-card>
+    </div>
+    <section class="knowledge">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">{{ text('SELF SERVICE', 'LIBRE-SERVICE') }}</p>
+          <h2>{{ text('Knowledge base', 'Base de connaissances') }}</h2>
+        </div>
+        <div>
+          <input
+            pInputText
+            [(ngModel)]="search"
+            [placeholder]="text('Search articles', 'Rechercher')"
+            (keyup.enter)="searchKnowledge()"
+          /><button pButton type="button" [text]="true" (click)="searchKnowledge()">
+            {{ text('Search', 'Rechercher') }}
+          </button>
+        </div>
+      </div>
+      <div class="articles">
+        @for (article of articles(); track article.id) {
+          <article>
+            <h3>{{ text(article.titleEnglish, article.titleFrench) }}</h3>
+            <div
+              class="rich-content"
+              [innerHTML]="text(article.bodyEnglish, article.bodyFrench)"
+            ></div>
+          </article>
+        } @empty {
+          <p>{{ text('No published articles match.', 'Aucun article publié ne correspond.') }}</p>
+        }
+      </div>
+    </section>
+  }
+</main>

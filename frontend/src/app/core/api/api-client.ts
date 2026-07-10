@@ -35,6 +35,16 @@ import {
   TicketSchema,
   TicketTypeDefinition,
   TicketPriorityDefinition,
+  PortalSettings,
+  PublicPortal,
+  RequesterTicket,
+  ApiTokenItem,
+  EmailChannel,
+  WebhookItem,
+  WebhookDeliveryItem,
+  IntegrationConnectionItem,
+  KnowledgeArticle,
+  AiAssistance,
 } from './api-models';
 
 @Injectable({ providedIn: 'root' })
@@ -619,5 +629,175 @@ export class ApiClient {
 
   previewAttachment(attachmentId: string) {
     return this.http.get(`/api/attachments/${attachmentId}/preview`, { responseType: 'blob' });
+  }
+
+  publicPortal(tenantId: string) {
+    return this.http.get<PublicPortal>(`/api/public/portal/${tenantId}`);
+  }
+
+  submitRequesterTicket(tenantId: string, request: object) {
+    return this.http.post<{ ticketId: string; key: string; accessToken: string }>(
+      `/api/public/portal/${tenantId}/tickets`,
+      request,
+    );
+  }
+
+  requesterTicket(ticketId: string, accessToken: string) {
+    return this.http.get<RequesterTicket>(`/api/public/portal/tickets/${ticketId}`, {
+      headers: { 'X-Requester-Token': accessToken },
+    });
+  }
+
+  requesterComment(ticketId: string, accessToken: string, body: string) {
+    return this.http.post(
+      `/api/public/portal/tickets/${ticketId}/comments`,
+      { body },
+      { headers: { 'X-Requester-Token': accessToken } },
+    );
+  }
+
+  portalSettings() {
+    return this.http.get<PortalSettings>('/api/portal/settings');
+  }
+  updatePortalSettings(request: {
+    isEnabled: boolean;
+    introductionEnglish: string;
+    introductionFrench: string;
+  }) {
+    return this.http.put<void>('/api/portal/settings', request);
+  }
+  setPortalProject(projectId: string, isEnabled: boolean) {
+    return this.http.put<void>(`/api/portal/projects/${projectId}`, { isEnabled });
+  }
+
+  apiTokens() {
+    return this.http.get<ApiTokenItem[]>('/api/api-tokens');
+  }
+  createApiToken(request: {
+    name: string;
+    scopes: string[];
+    projectIds: string[];
+    expiresAt: string | null;
+  }) {
+    return this.http.post<{ token: ApiTokenItem; rawToken: string }>('/api/api-tokens', request);
+  }
+  revokeApiToken(id: string) {
+    return this.http.post<void>(`/api/api-tokens/${id}/revoke`, null);
+  }
+
+  emailChannels() {
+    return this.http.get<EmailChannel[]>('/api/integrations/inbound-email');
+  }
+  createEmailChannel(request: Omit<EmailChannel, 'id' | 'createdAt'>) {
+    return this.http.post<{ channel: EmailChannel; rawSecret: string }>(
+      '/api/integrations/inbound-email',
+      request,
+    );
+  }
+  webhooks() {
+    return this.http.get<WebhookItem[]>('/api/integrations/webhooks');
+  }
+  createWebhook(request: Omit<WebhookItem, 'id' | 'createdAt'>) {
+    return this.http.post<{ webhook: WebhookItem; rawSecret: string }>(
+      '/api/integrations/webhooks',
+      request,
+    );
+  }
+  testWebhook(id: string) {
+    return this.http.post(`/api/integrations/webhooks/${id}/test`, null);
+  }
+  webhookDeliveries() {
+    return this.http.get<WebhookDeliveryItem[]>('/api/integrations/webhooks/deliveries');
+  }
+  connections() {
+    return this.http.get<IntegrationConnectionItem[]>('/api/integrations/connections');
+  }
+  upsertConnection(request: { provider: string; name: string; configuration: object }) {
+    return this.http.post<IntegrationConnectionItem>('/api/integrations/connections', request);
+  }
+  testConnection(id: string) {
+    return this.http.post<IntegrationConnectionItem>(
+      `/api/integrations/connections/${id}/test`,
+      null,
+    );
+  }
+  ssoConfiguration() {
+    return this.http.get<{
+      id: string | null;
+      authority: string;
+      clientId: string;
+      allowedEmailDomains: string[];
+      isEnabled: boolean;
+      requireSso: boolean;
+      hasClientSecret: boolean;
+    }>('/api/integrations/sso');
+  }
+  updateSso(request: object) {
+    return this.http.put<void>('/api/integrations/sso', request);
+  }
+  testSso() {
+    return this.http.post('/api/integrations/sso/test', null);
+  }
+  startSso(tenantId: string) {
+    return this.http.get<{ authorizationUrl: string }>(`/api/auth/sso/${tenantId}/start`);
+  }
+  exchangeSso(code: string) {
+    return this.http.post<AuthenticatedSession>('/api/auth/sso/exchange', { code });
+  }
+  aiConfiguration() {
+    return this.http.get<{
+      isEnabled: boolean;
+      provider: string;
+      allowedKinds: AiAssistance['kind'][];
+      requireHumanReview: boolean;
+      allowAttachmentContent: boolean;
+      hasCredential: boolean;
+      providerDoesNotTrain: boolean;
+      evaluationVersion: string;
+    }>('/api/integrations/ai');
+  }
+  updateAi(request: object) {
+    return this.http.put<void>('/api/integrations/ai', request);
+  }
+
+  knowledge(search?: string, projectId?: string) {
+    let params = new HttpParams();
+    if (search) params = params.set('search', search);
+    if (projectId) params = params.set('projectId', projectId);
+    return this.http.get<KnowledgeArticle[]>('/api/knowledge', { params });
+  }
+  publicKnowledge(tenantId: string, search?: string) {
+    return this.http.get<KnowledgeArticle[]>(`/api/public/portal/${tenantId}/knowledge`, {
+      params: search ? { search } : {},
+    });
+  }
+  saveKnowledge(
+    request: Omit<KnowledgeArticle, 'id' | 'status' | 'publishedAt' | 'updatedAt'>,
+    id?: string,
+  ) {
+    return id
+      ? this.http.put<KnowledgeArticle>(`/api/knowledge/${id}`, request)
+      : this.http.post<KnowledgeArticle>('/api/knowledge', request);
+  }
+  setKnowledgeStatus(id: string, status: KnowledgeArticle['status']) {
+    return this.http.post<KnowledgeArticle>(`/api/knowledge/${id}/status`, { status });
+  }
+  ticketKnowledge(ticketId: string) {
+    return this.http.get<KnowledgeArticle[]>(`/api/knowledge/tickets/${ticketId}`);
+  }
+  linkKnowledge(ticketId: string, articleId: string) {
+    return this.http.post<void>(`/api/knowledge/${articleId}/tickets/${ticketId}`, null);
+  }
+
+  aiAssistance(ticketId: string) {
+    return this.http.get<AiAssistance[]>(`/api/tickets/${ticketId}/ai-assistance`);
+  }
+  createAiAssistance(ticketId: string, kind: AiAssistance['kind']) {
+    return this.http.post<AiAssistance>(`/api/tickets/${ticketId}/ai-assistance`, { kind });
+  }
+  reviewAiAssistance(ticketId: string, id: string, accept: boolean) {
+    return this.http.post<AiAssistance>(`/api/tickets/${ticketId}/ai-assistance/${id}/review`, {
+      accept,
+    });
   }
 }

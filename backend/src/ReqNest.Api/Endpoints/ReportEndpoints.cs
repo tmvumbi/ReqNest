@@ -575,7 +575,7 @@ public static class ReportEndpoints
                 entity.WorkflowStatus.Key,
                 entity.WorkflowStatus.Category,
                 entity.AssigneeUser == null ? "Unassigned" : entity.AssigneeUser.DisplayName,
-                entity.ReporterUser.DisplayName,
+                entity.ReporterDisplayNameSnapshot,
                 entity.CreatedAt,
                 entity.FirstRespondedAt,
                 entity.ResolvedAt,

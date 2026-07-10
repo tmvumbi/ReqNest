@@ -37,6 +37,8 @@ public sealed class ReqNestApiFactory : WebApplicationFactory<Program>, IAsyncLi
                 ["Notifications:RunDeadlineWorker"] = "false",
                 ["Notifications:RunEmailWorker"] = "false",
                 ["Reports:RunScheduleWorker"] = "false",
+                ["Integrations:RunWebhookWorker"] = "false",
+                ["Integrations:RunConnectionWorker"] = "false",
                 ["Authentication:RateLimit:PermitLimit"] = "1000",
             });
         });

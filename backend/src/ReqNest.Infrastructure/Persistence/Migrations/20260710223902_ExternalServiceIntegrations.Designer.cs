@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using ReqNest.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using ReqNest.Infrastructure.Persistence;
 namespace ReqNest.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ReqNestDbContext))]
-    partial class ReqNestDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260710223902_ExternalServiceIntegrations")]
+    partial class ExternalServiceIntegrations
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

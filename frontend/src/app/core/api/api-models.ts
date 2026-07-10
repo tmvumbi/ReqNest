@@ -145,7 +145,7 @@ export interface TicketDetail {
   statusLabelEnglish: string;
   statusLabelFrench: string;
   statusCategory: 'ToDo' | 'InProgress' | 'Done';
-  reporterUserId: string;
+  reporterUserId: string | null;
   reporterDisplayName: string;
   assigneeUserId: string | null;
   assigneeDisplayName: string | null;
@@ -174,7 +174,7 @@ export interface TicketDetail {
 
 export interface TicketComment {
   id: string;
-  authorUserId: string;
+  authorUserId: string | null;
   authorDisplayName: string;
   body: string;
   isHidden: boolean;
@@ -201,7 +201,7 @@ export interface TicketAttachment {
   size: number;
   checksumSha256: string;
   scanStatus: 'Pending' | 'Clean' | 'Quarantined' | 'Failed';
-  uploadedByUserId: string;
+  uploadedByUserId: string | null;
   createdAt: string;
 }
 
@@ -433,4 +433,134 @@ export interface ReportSchedule {
   isActive: boolean;
   nextRunAt: string;
   lastRunAt: string | null;
+}
+
+export interface PortalProject {
+  id: string;
+  key: string;
+  nameEnglish: string;
+  nameFrench: string;
+  isEnabled: boolean;
+}
+
+export interface PublicPortal {
+  tenantId: string;
+  companyName: string;
+  companyShortName: string;
+  primaryColor: string;
+  defaultLanguage: AppLanguage;
+  introductionEnglish: string | null;
+  introductionFrench: string | null;
+  projects: PortalProject[];
+}
+
+export interface PortalSettings {
+  tenantId: string;
+  isEnabled: boolean;
+  introductionEnglish: string | null;
+  introductionFrench: string | null;
+  projects: PortalProject[];
+}
+
+export interface RequesterTicket {
+  ticket: {
+    id: string;
+    key: string;
+    title: string;
+    description: string;
+    projectNameEnglish: string;
+    projectNameFrench: string;
+    statusEnglish: string;
+    statusFrench: string;
+    slaState: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+  comments: {
+    id: string;
+    authorName: string;
+    body: string;
+    isRequester: boolean;
+    createdAt: string;
+  }[];
+}
+
+export interface ApiTokenItem {
+  id: string;
+  name: string;
+  prefix: string;
+  scopes: string[];
+  projectIds: string[];
+  expiresAt: string | null;
+  revokedAt: string | null;
+  lastUsedAt: string | null;
+  createdAt: string;
+}
+
+export interface EmailChannel {
+  id: string;
+  projectId: string;
+  address: string;
+  defaultTypeKey: string;
+  defaultPriorityKey: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface WebhookItem {
+  id: string;
+  name: string;
+  url: string;
+  eventTypes: string[];
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface WebhookDeliveryItem {
+  id: string;
+  subscriptionId: string;
+  eventType: string;
+  status: 'Pending' | 'Delivered' | 'Failed';
+  attempts: number;
+  lastStatusCode: number | null;
+  lastError: string | null;
+  createdAt: string;
+}
+
+export interface IntegrationConnectionItem {
+  id: string;
+  provider: string;
+  name: string;
+  status: 'Disabled' | 'Connected' | 'Error';
+  lastCheckedAt: string | null;
+  lastError: string | null;
+  retryAttempts: number;
+  nextRetryAt: string | null;
+  createdAt: string;
+}
+
+export interface KnowledgeArticle {
+  id: string;
+  projectId: string | null;
+  slug: string;
+  titleEnglish: string;
+  titleFrench: string;
+  bodyEnglish: string;
+  bodyFrench: string;
+  status: 'Draft' | 'Published' | 'Archived';
+  visibility: 'Internal' | 'Requesters';
+  publishedAt: string | null;
+  updatedAt: string;
+}
+
+export interface AiAssistance {
+  id: string;
+  kind: 'Summarize' | 'SuggestReply' | 'Classify';
+  draftOutput: string;
+  status: 'Draft' | 'Accepted' | 'Rejected' | 'Failed';
+  evaluationScore: number;
+  requestedByUserId: string;
+  reviewedByUserId: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
 }

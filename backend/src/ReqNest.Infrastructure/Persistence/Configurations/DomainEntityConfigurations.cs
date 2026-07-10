@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using ReqNest.Core.Auditing;
 using ReqNest.Core.Configuration;
 using ReqNest.Core.Identity;
+using ReqNest.Core.Integrations;
 using ReqNest.Core.Notifications;
 using ReqNest.Core.Reports;
 using ReqNest.Core.Tenancy;
@@ -260,7 +261,13 @@ public sealed class TicketConfiguration : IEntityTypeConfiguration<Ticket>
         builder.HasOne(entity => entity.ReporterUser)
             .WithMany()
             .HasForeignKey(entity => entity.ReporterUserId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.SetNull);
+        builder.HasOne<RequesterIdentity>()
+            .WithMany()
+            .HasForeignKey(entity => entity.RequesterIdentityId)
+            .OnDelete(DeleteBehavior.SetNull);
+        builder.Property(entity => entity.ReporterEmailSnapshot).HasMaxLength(320).IsRequired();
+        builder.Property(entity => entity.ReporterDisplayNameSnapshot).HasMaxLength(160).IsRequired();
         builder.HasOne(entity => entity.AssigneeUser)
             .WithMany()
             .HasForeignKey(entity => entity.AssigneeUserId)
@@ -432,6 +439,10 @@ public sealed class AttachmentConfiguration : IEntityTypeConfiguration<Attachmen
             .WithMany(entity => entity.Attachments)
             .HasForeignKey(entity => entity.TicketCommentId)
             .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<RequesterIdentity>()
+            .WithMany()
+            .HasForeignKey(entity => entity.RequesterIdentityId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }
 

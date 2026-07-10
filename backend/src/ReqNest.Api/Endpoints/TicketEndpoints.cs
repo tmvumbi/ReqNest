@@ -5,6 +5,7 @@ using ReqNest.Core.Auditing;
 using ReqNest.Core.Configuration;
 using ReqNest.Core.Content;
 using ReqNest.Core.Identity;
+using ReqNest.Core.Integrations;
 using ReqNest.Core.Notifications;
 using ReqNest.Core.Tickets;
 using ReqNest.Core.Workflows;
@@ -144,7 +145,7 @@ public static class TicketEndpoints
                 entity.WorkflowStatus.LabelFrench,
                 entity.AssigneeUserId,
                 entity.AssigneeUser == null ? null : entity.AssigneeUser.DisplayName,
-                entity.ReporterUser.DisplayName,
+                entity.ReporterDisplayNameSnapshot,
                 entity.DueAt,
                 entity.SlaState,
                 entity.IsArchived,
@@ -164,6 +165,7 @@ public static class TicketEndpoints
         ITenantAuthorizationService authorizationService,
         INotificationService notificationService,
         ISlaCalculator slaCalculator,
+        IWebhookEventPublisher webhookPublisher,
         CancellationToken cancellationToken)
     {
         var authorization = httpContext.TenantAuthorization();
@@ -253,6 +255,10 @@ public static class TicketEndpoints
         }
 
         var actorUserId = httpContext.User.UserId();
+        var actor = await dbContext.Users.IgnoreQueryFilters().AsNoTracking()
+            .Where(entity => entity.Id == actorUserId)
+            .Select(entity => new { entity.Email, entity.DisplayName })
+            .SingleAsync(cancellationToken);
         var assigneeUserId = request.AssigneeUserId ?? project.DefaultAssigneeUserId;
         var now = DateTimeOffset.UtcNow;
         var sla = await slaCalculator.CalculateAsync(project.Id, priorityKey, now, cancellationToken);
@@ -272,6 +278,8 @@ public static class TicketEndpoints
             PriorityKey = priorityKey,
             WorkflowStatusId = initialStatus.Id,
             ReporterUserId = actorUserId,
+            ReporterEmailSnapshot = actor.Email,
+            ReporterDisplayNameSnapshot = actor.DisplayName,
             AssigneeUserId = assigneeUserId,
             Labels = NormalizeLabels(request.Labels),
             DueAt = request.DueAt,
@@ -310,6 +318,15 @@ public static class TicketEndpoints
             dbContext,
             cancellationToken);
         var audit = AddAudit(dbContext, httpContext, ticket, "ticket.created", "Ticket was created.");
+        await webhookPublisher.PublishAsync(authorization.TenantId, "ticket.created", audit.Id.ToString(), new
+        {
+            ticket.Id,
+            ticket.Key,
+            ticket.ProjectId,
+            ticket.Title,
+            ticket.TypeKey,
+            ticket.PriorityKey,
+        }, cancellationToken);
         if (assigneeUserId is not null)
         {
             await notificationService.AddAsync(new NotificationMessage(
@@ -364,6 +381,7 @@ public static class TicketEndpoints
         ITenantAuthorizationService authorizationService,
         INotificationService notificationService,
         ISlaCalculator slaCalculator,
+        IWebhookEventPublisher webhookPublisher,
         CancellationToken cancellationToken)
     {
         var authorization = httpContext.TenantAuthorization();
@@ -489,6 +507,15 @@ public static class TicketEndpoints
             await AddCustomFieldValuesAsync(ticket, request.CustomFields, dbContext, cancellationToken);
         }
         var audit = AddAudit(dbContext, httpContext, ticket, "ticket.updated", "Ticket details were updated.");
+        await webhookPublisher.PublishAsync(authorization.TenantId, "ticket.updated", audit.Id.ToString(), new
+        {
+            ticket.Id,
+            ticket.Key,
+            ticket.ProjectId,
+            ticket.Title,
+            ticket.TypeKey,
+            ticket.PriorityKey,
+        }, cancellationToken);
         if (assignmentChanged && ticket.AssigneeUserId is not null)
         {
             await notificationService.AddAsync(new NotificationMessage(
@@ -534,6 +561,7 @@ public static class TicketEndpoints
         ReqNestDbContext dbContext,
         INotificationService notificationService,
         ISlaCalculator slaCalculator,
+        IWebhookEventPublisher webhookPublisher,
         CancellationToken cancellationToken)
     {
         var authorization = httpContext.TenantAuthorization();
@@ -636,6 +664,13 @@ public static class TicketEndpoints
             Comment = request.Comment?.Trim(),
         });
         var audit = AddAudit(dbContext, httpContext, ticket, "ticket.transitioned", "Ticket status was changed.");
+        await webhookPublisher.PublishAsync(authorization.TenantId, "ticket.transitioned", audit.Id.ToString(), new
+        {
+            ticket.Id,
+            ticket.Key,
+            ticket.ProjectId,
+            toStatusId = transition.ToStatusId,
+        }, cancellationToken);
         var notificationType = transition.ToStatus.IsTerminal
             ? NotificationType.TicketResolved
             : wasTerminal ? NotificationType.TicketReopened : NotificationType.TicketStatusChanged;
@@ -856,7 +891,7 @@ public static class TicketEndpoints
                 entity.WorkflowStatus.LabelFrench,
                 entity.WorkflowStatus.Category,
                 entity.ReporterUserId,
-                entity.ReporterUser.DisplayName,
+                entity.ReporterDisplayNameSnapshot,
                 entity.AssigneeUserId,
                 entity.AssigneeUser == null ? null : entity.AssigneeUser.DisplayName,
                 entity.Labels,
@@ -918,7 +953,8 @@ public static class TicketEndpoints
         await dbContext.TicketWatchers
             .Where(entity => entity.TicketId == ticket.Id && !entity.IsMuted)
             .Select(entity => entity.UserId)
-            .Concat(dbContext.Tickets.Where(entity => entity.Id == ticket.Id).Select(entity => entity.ReporterUserId))
+            .Concat(dbContext.Tickets.Where(entity => entity.Id == ticket.Id && entity.ReporterUserId != null)
+                .Select(entity => entity.ReporterUserId!.Value))
             .Concat(dbContext.Tickets.Where(entity => entity.Id == ticket.Id && entity.AssigneeUserId != null)
                 .Select(entity => entity.AssigneeUserId!.Value))
             .Distinct()
@@ -1159,7 +1195,7 @@ public sealed record TicketDetailResponse(
     string StatusLabelEnglish,
     string StatusLabelFrench,
     WorkflowStatusCategory StatusCategory,
-    Guid ReporterUserId,
+    Guid? ReporterUserId,
     string ReporterDisplayName,
     Guid? AssigneeUserId,
     string? AssigneeDisplayName,

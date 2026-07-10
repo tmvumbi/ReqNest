@@ -77,9 +77,15 @@ public sealed class Ticket : Entity
 
     public WorkflowStatus WorkflowStatus { get; set; } = null!;
 
-    public Guid ReporterUserId { get; set; }
+    public Guid? ReporterUserId { get; set; }
 
-    public User ReporterUser { get; set; } = null!;
+    public User? ReporterUser { get; set; }
+
+    public Guid? RequesterIdentityId { get; set; }
+
+    public string ReporterEmailSnapshot { get; set; } = string.Empty;
+
+    public string ReporterDisplayNameSnapshot { get; set; } = string.Empty;
 
     public Guid? AssigneeUserId { get; set; }
 
@@ -197,7 +203,7 @@ public sealed class TicketStatusHistory : Entity
 
     public Guid ToStatusId { get; set; }
 
-    public Guid ChangedByUserId { get; set; }
+    public Guid? ChangedByUserId { get; set; }
 
     public string? Comment { get; set; }
 }
@@ -229,7 +235,9 @@ public sealed class Attachment : Entity
 
     public TicketComment? TicketComment { get; set; }
 
-    public Guid UploadedByUserId { get; set; }
+    public Guid? UploadedByUserId { get; set; }
+
+    public Guid? RequesterIdentityId { get; set; }
 
     public string ContainerName { get; set; } = string.Empty;
 

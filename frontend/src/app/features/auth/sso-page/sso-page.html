@@ -1,0 +1,43 @@
+<main class="auth-layout">
+  <a routerLink="/" class="brand"><span class="brand-mark">R</span><span>ReqNest</span></a>
+  <section class="auth-copy">
+    <p class="eyebrow">OIDC</p>
+    <h1>{{ text('Company single sign-on', "Authentification unique d'entreprise") }}</h1>
+    <p>
+      {{
+        text(
+          'Use the company identifier supplied by your administrator. Your identity is linked only after the provider verifies your email and active membership.',
+          "Utilisez l'identifiant fourni par votre administrateur. Votre identité n'est liée qu'après vérification de votre courriel et de votre adhésion active."
+        )
+      }}
+    </p>
+  </section>
+  <p-card styleClass="auth-card"
+    ><form (ngSubmit)="start()">
+      <div class="field">
+        <label for="tenantId">{{ text('Company ID', "ID de l'entreprise") }}</label
+        ><input
+          pInputText
+          id="tenantId"
+          [(ngModel)]="tenantId"
+          name="tenantId"
+          required
+          autocomplete="organization"
+        />
+      </div>
+      @if (error()) {
+        <p-message severity="error">{{ error() }}</p-message>
+      }
+      <button pButton type="submit" [loading]="busy()" class="submit-button">
+        {{ text('Continue with SSO', 'Continuer avec le SSO') }}
+      </button>
+      <div class="auth-links">
+        <a routerLink="/login">{{
+          text('Use email and password', 'Utiliser le courriel et le mot de passe')
+        }}</a>
+      </div>
+    </form></p-card
+  ><button class="language-button" type="button" (click)="i18n.toggleLanguage()">
+    {{ i18n.language() === 'English' ? 'FR' : 'EN' }}
+  </button>
+</main>

@@ -428,7 +428,7 @@ public sealed record AttachmentResponse(
     long Size,
     string ChecksumSha256,
     AttachmentScanStatus ScanStatus,
-    Guid UploadedByUserId,
+    Guid? UploadedByUserId,
     DateTimeOffset CreatedAt);
 
 public sealed record SetAttachmentScanResultRequest(AttachmentScanStatus Status);

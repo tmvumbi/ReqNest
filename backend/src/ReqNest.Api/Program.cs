@@ -13,10 +13,20 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
+builder.Services.AddDataProtection();
+builder.Services.AddHttpClient();
 builder.Services.AddInfrastructure(builder.Configuration);
 if (builder.Configuration.GetValue<bool>("Reports:RunScheduleWorker"))
 {
     builder.Services.AddHostedService<ReportScheduleWorker>();
+}
+if (builder.Configuration.GetValue<bool>("Integrations:RunWebhookWorker"))
+{
+    builder.Services.AddHostedService<WebhookDeliveryWorker>();
+}
+if (builder.Configuration.GetValue<bool>("Integrations:RunConnectionWorker"))
+{
+    builder.Services.AddHostedService<IntegrationConnectionWorker>();
 }
 builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
@@ -122,6 +132,13 @@ app.MapConfigurationEndpoints();
 app.MapCustomRoleEndpoints();
 app.MapRelationshipEndpoints();
 app.MapOperationsEndpoints();
+app.MapRequesterPortalEndpoints();
+app.MapApiTokenEndpoints();
+app.MapKnowledgeEndpoints();
+app.MapIntegrationAdministrationEndpoints();
+app.MapInboundEmailEndpoints();
+app.MapSsoAuthenticationEndpoints();
+app.MapAiAssistanceEndpoints();
 
 app.Run();
 

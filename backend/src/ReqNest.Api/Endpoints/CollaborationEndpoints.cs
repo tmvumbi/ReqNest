@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using ReqNest.Core.Content;
 using ReqNest.Core.Identity;
+using ReqNest.Core.Integrations;
 using ReqNest.Core.Notifications;
 using ReqNest.Core.Tickets;
 using ReqNest.Infrastructure.Persistence;
@@ -52,7 +53,27 @@ public static class CollaborationEndpoints
                 entity.CreatedAt,
                 entity.UpdatedAt))
             .ToArrayAsync(cancellationToken);
-        return TypedResults.Ok<IReadOnlyCollection<TicketCommentResponse>>(comments);
+        var requesterComments = await dbContext.RequesterComments.AsNoTracking()
+            .Where(entity => entity.TicketId == ticketId)
+            .OrderBy(entity => entity.CreatedAt)
+            .Select(entity => new TicketCommentResponse(
+                entity.Id,
+                null,
+                dbContext.RequesterIdentities
+                    .Where(requester => requester.Id == entity.RequesterIdentityId)
+                    .Select(requester => requester.DisplayName)
+                    .Single(),
+                entity.IsHidden ? string.Empty : entity.Body,
+                entity.IsHidden,
+                false,
+                null,
+                entity.CreatedAt,
+                entity.UpdatedAt))
+            .ToArrayAsync(cancellationToken);
+        return TypedResults.Ok<IReadOnlyCollection<TicketCommentResponse>>(comments
+            .Concat(requesterComments)
+            .OrderBy(entity => entity.CreatedAt)
+            .ToArray());
     }
 
     private static async Task<IResult> AddCommentAsync(
@@ -63,6 +84,7 @@ public static class CollaborationEndpoints
         IRichContentSanitizer contentSanitizer,
         ITenantAuthorizationService authorizationService,
         INotificationService notificationService,
+        IWebhookEventPublisher webhookPublisher,
         CancellationToken cancellationToken)
     {
         var access = await GetTicketAccessAsync(ticketId, httpContext, dbContext, cancellationToken, tracked: true);
@@ -111,6 +133,13 @@ public static class CollaborationEndpoints
         }
 
         var audit = TicketEndpoints.AddAudit(dbContext, httpContext, access.Ticket, "ticket.commented", "A comment was added.");
+        await webhookPublisher.PublishAsync(access.Authorization!.TenantId, "ticket.commented", audit.Id.ToString(), new
+        {
+            ticketId = access.Ticket.Id,
+            access.Ticket.Key,
+            access.Ticket.ProjectId,
+            commentId = comment.Id,
+        }, cancellationToken);
         var regularRecipients = await TicketEndpoints.NotificationRecipientsAsync(dbContext, access.Ticket, cancellationToken);
         var mentionRecipients = request.MentionUserIds.Distinct().ToArray();
         await notificationService.AddAsync(new NotificationMessage(
@@ -367,6 +396,16 @@ public static class CollaborationEndpoints
                 entity.ChangedByUserId,
                 entity.CreatedAt))
             .ToArrayAsync(cancellationToken);
+        var requesterComments = await dbContext.RequesterComments.AsNoTracking()
+            .Where(entity => entity.TicketId == ticketId)
+            .Select(entity => new TicketActivityResponse(
+                entity.Id,
+                "comment",
+                "requester.ticket.commented",
+                entity.IsHidden ? string.Empty : entity.Body,
+                null,
+                entity.CreatedAt))
+            .ToArrayAsync(cancellationToken);
         var attachments = await dbContext.Attachments.AsNoTracking()
             .Where(entity => entity.TicketId == ticketId)
             .Select(entity => new TicketActivityResponse(
@@ -379,6 +418,7 @@ public static class CollaborationEndpoints
             .ToArrayAsync(cancellationToken);
         return TypedResults.Ok<IReadOnlyCollection<TicketActivityResponse>>(audits
             .Concat(comments)
+            .Concat(requesterComments)
             .Concat(transitions)
             .Concat(attachments)
             .OrderByDescending(entity => entity.OccurredAt)
@@ -436,7 +476,7 @@ public sealed record SetWatcherMuteRequest(bool Muted);
 
 public sealed record TicketCommentResponse(
     Guid Id,
-    Guid AuthorUserId,
+    Guid? AuthorUserId,
     string AuthorDisplayName,
     string Body,
     bool IsHidden,

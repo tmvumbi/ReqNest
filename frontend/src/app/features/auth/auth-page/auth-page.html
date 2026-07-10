@@ -112,6 +112,9 @@
       <div class="auth-links">
         @if (mode === 'login') {
           <a routerLink="/forgot-password">{{ i18n.text('auth.forgot') }}</a>
+          <a routerLink="/auth/sso">{{
+            i18n.language() === 'French' ? "Authentification d'entreprise" : 'Company SSO'
+          }}</a>
           <a routerLink="/register">{{ i18n.text('auth.createCompany') }}</a>
         } @else {
           <a routerLink="/login">{{ i18n.text('auth.backToSignIn') }}</a>

@@ -40,6 +40,12 @@ public sealed class Tenant : Entity
 
     public int ReportRetentionDays { get; set; } = 7;
 
+    public bool RequesterPortalEnabled { get; set; }
+
+    public string? RequesterPortalIntroductionEnglish { get; set; }
+
+    public string? RequesterPortalIntroductionFrench { get; set; }
+
     public ICollection<TenantMembership> Memberships { get; set; } = [];
 
     public ICollection<Project> Projects { get; set; } = [];
@@ -78,4 +84,6 @@ public sealed class Project : Entity
     public int? ResolutionTargetMinutes { get; set; }
 
     public Guid? SlaPolicyId { get; set; }
+
+    public bool RequesterPortalEnabled { get; set; }
 }

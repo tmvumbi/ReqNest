@@ -1,0 +1,384 @@
+<header class="page-heading">
+  <div>
+    <p class="eyebrow">{{ text('EXTERNAL SERVICE', 'SERVICE EXTERNE') }}</p>
+    <h1>{{ text('Portal & integrations', 'Portail et intégrations') }}</h1>
+    <p>
+      {{
+        text(
+          'Safely connect requester channels, automation, identity, and optional assistance.',
+          "Connectez en toute sécurité les canaux demandeurs, l'automatisation, l'identité et l'assistance facultative."
+        )
+      }}
+    </p>
+  </div>
+</header>
+@if (error()) {
+  <p-message severity="error">{{ error() }}</p-message>
+}
+@if (success()) {
+  <p-message severity="success">{{ success() }}</p-message>
+}
+@if (oneTimeSecret()) {
+  <p-message severity="warn"
+    ><strong>{{
+      text(
+        'Copy this value now; it will not be shown again:',
+        'Copiez cette valeur maintenant ; elle ne sera plus affichée :'
+      )
+    }}</strong
+    ><code>{{ oneTimeSecret() }}</code
+    ><button pButton type="button" size="small" [text]="true" (click)="oneTimeSecret.set('')">
+      ×
+    </button></p-message
+  >
+}
+<div class="sections">
+  @if (portal(); as p) {
+    <section class="content-panel">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">01</p>
+          <h2>{{ text('Requester portal', 'Portail demandeur') }}</h2>
+        </div>
+        <p-checkbox [(ngModel)]="p.isEnabled" [binary]="true" [inputId]="'portalEnabled'" /><label
+          for="portalEnabled"
+          >{{ text('Enabled', 'Activé') }}</label
+        >
+      </div>
+      <div class="split">
+        <label
+          >English introduction<textarea
+            pTextarea
+            [(ngModel)]="p.introductionEnglish"
+            rows="4"
+          ></textarea></label
+        ><label
+          >Introduction française<textarea
+            pTextarea
+            [(ngModel)]="p.introductionFrench"
+            rows="4"
+          ></textarea>
+        </label>
+      </div>
+      <div class="project-toggles">
+        @for (project of p.projects; track project.id) {
+          <p-checkbox
+            [(ngModel)]="project.isEnabled"
+            [binary]="true"
+            [inputId]="'portalProject-' + project.id"
+          />
+          <label [for]="'portalProject-' + project.id"
+            >{{ project.key }} · {{ text(project.nameEnglish, project.nameFrench) }}</label
+          >
+        }
+      </div>
+      <button pButton type="button" (click)="savePortal()" [loading]="busy()">
+        {{ text('Save portal', 'Enregistrer le portail') }}
+      </button>
+      @if (p.isEnabled) {
+        <a [href]="'/portal/' + p.tenantId" target="_blank">{{
+          text('Open public portal ↗', 'Ouvrir le portail public ↗')
+        }}</a>
+      }
+    </section>
+  }
+  <section class="content-panel">
+    <p class="eyebrow">02</p>
+    <h2>{{ text('Inbound email', 'Courriel entrant') }}</h2>
+    <p>
+      {{
+        text(
+          'Your mail provider posts verified messages to the generated channel endpoint. Replies thread using Message-ID and In-Reply-To.',
+          'Votre fournisseur de messagerie transmet les messages vérifiés au canal. Les réponses sont regroupées avec Message-ID et In-Reply-To.'
+        )
+      }}
+    </p>
+    <form (ngSubmit)="createChannel()" class="inline-form">
+      <p-select
+        [(ngModel)]="channelProject"
+        name="project"
+        [options]="projects()"
+        optionValue="id"
+        optionLabel="key"
+      /><input
+        pInputText
+        [(ngModel)]="channelAddress"
+        name="address"
+        type="email"
+        placeholder="support@example.com"
+        required
+      /><button pButton type="submit">{{ text('Create channel', 'Créer le canal') }}</button>
+    </form>
+    <ul>
+      @for (channel of channels(); track channel.id) {
+        <li>
+          <strong>{{ channel.address }}</strong
+          ><code>POST /api/public/inbound-email/{{ channel.id }}</code>
+        </li>
+      }
+    </ul>
+  </section>
+  <section class="content-panel">
+    <p class="eyebrow">03</p>
+    <h2>{{ text('Scoped API tokens', "Jetons d'API limités") }}</h2>
+    <form (ngSubmit)="createToken()" class="form">
+      <input
+        pInputText
+        [(ngModel)]="tokenName"
+        name="tokenName"
+        [placeholder]="text('Automation name', 'Nom automatisation')"
+        required
+      /><p-multiselect
+        [(ngModel)]="tokenScopes"
+        name="scopes"
+        [options]="scopes"
+        [placeholder]="text('Permissions', 'Autorisations')"
+      /><p-multiselect
+        [(ngModel)]="tokenProjects"
+        name="tokenProjects"
+        [options]="projects()"
+        optionValue="id"
+        optionLabel="key"
+        [placeholder]="text('Project scope (empty = all)', 'Portée projet (vide = tous)')"
+      /><input [(ngModel)]="tokenExpiry" name="expiry" type="datetime-local" /><button
+        pButton
+        type="submit"
+      >
+        {{ text('Create token', 'Créer le jeton') }}
+      </button>
+    </form>
+    <ul>
+      @for (token of tokens(); track token.id) {
+        <li>
+          <div>
+            <strong>{{ token.name }}</strong
+            ><code>{{ token.prefix }}…</code><small>{{ token.scopes.join(', ') }}</small>
+          </div>
+          @if (!token.revokedAt) {
+            <button
+              pButton
+              type="button"
+              size="small"
+              severity="danger"
+              [text]="true"
+              (click)="revokeToken(token.id)"
+            >
+              {{ text('Revoke', 'Révoquer') }}
+            </button>
+          } @else {
+            <p-tag value="Revoked" severity="secondary" />
+          }
+        </li>
+      }
+    </ul>
+  </section>
+  <section class="content-panel">
+    <p class="eyebrow">04</p>
+    <h2>Webhooks</h2>
+    <form (ngSubmit)="createWebhook()" class="form">
+      <input
+        pInputText
+        [(ngModel)]="webhookName"
+        name="webhookName"
+        placeholder="CRM events"
+        required
+      /><input
+        pInputText
+        [(ngModel)]="webhookUrl"
+        name="webhookUrl"
+        placeholder="https://hooks.example.com/reqnest"
+        required
+      /><p-multiselect [(ngModel)]="webhookEvents" name="events" [options]="events" /><button
+        pButton
+        type="submit"
+      >
+        {{ text('Create signed webhook', 'Créer le webhook signé') }}
+      </button>
+    </form>
+    <ul>
+      @for (hook of webhooks(); track hook.id) {
+        <li>
+          <div>
+            <strong>{{ hook.name }}</strong
+            ><small>{{ hook.url }}</small>
+          </div>
+          <button
+            pButton
+            type="button"
+            size="small"
+            severity="secondary"
+            (click)="testWebhook(hook.id)"
+          >
+            {{ text('Queue test', 'Mettre un test en file') }}
+          </button>
+        </li>
+      }
+    </ul>
+    <div class="delivery-grid">
+      @for (delivery of deliveries().slice(0, 8); track delivery.id) {
+        <span>{{ delivery.eventType }}</span
+        ><p-tag
+          [value]="delivery.status"
+          [severity]="
+            delivery.status === 'Delivered'
+              ? 'success'
+              : delivery.status === 'Failed'
+                ? 'danger'
+                : 'warn'
+          "
+        /><small>{{ delivery.attempts }} {{ text('attempts', 'tentatives') }}</small>
+      }
+    </div>
+  </section>
+  <section class="content-panel">
+    <p class="eyebrow">05</p>
+    <h2>{{ text('Single sign-on (OIDC)', 'Authentification unique (OIDC)') }}</h2>
+    <form (ngSubmit)="saveSso()" class="form">
+      <div class="split">
+        <label
+          >Authority<input
+            pInputText
+            [(ngModel)]="sso.authority"
+            name="authority"
+            placeholder="https://login.example.com/tenant" /></label
+        ><label>Client ID<input pInputText [(ngModel)]="sso.clientId" name="clientId" /></label>
+      </div>
+      <label
+        >Client secret<input
+          pInputText
+          type="password"
+          [(ngModel)]="sso.clientSecret"
+          name="clientSecret" /></label
+      ><label
+        >{{ text('Allowed email domains', 'Domaines de messagerie autorisés')
+        }}<input
+          pInputText
+          [(ngModel)]="sso.domains"
+          name="domains"
+          placeholder="example.com, subsidiary.com"
+      /></label>
+      <div class="checks">
+        <p-checkbox
+          [(ngModel)]="sso.isEnabled"
+          name="ssoEnabled"
+          [binary]="true"
+          inputId="ssoEnabled"
+        /><label for="ssoEnabled">{{ text('Enable SSO', 'Activer le SSO') }}</label>
+        <p-checkbox
+          [(ngModel)]="sso.requireSso"
+          name="requireSso"
+          [binary]="true"
+          inputId="requireSso"
+        /><label for="requireSso">{{
+          text('Require SSO for this tenant', 'Exiger le SSO pour ce client')
+        }}</label>
+      </div>
+      <div>
+        <button pButton type="submit">{{ text('Save SSO', 'Enregistrer le SSO') }}</button
+        ><button pButton type="button" severity="secondary" [outlined]="true" (click)="testSso()">
+          {{ text('Test discovery', 'Tester la découverte') }}
+        </button>
+      </div>
+    </form>
+  </section>
+  <section class="content-panel">
+    <p class="eyebrow">06</p>
+    <h2>{{ text('Third-party connectors', 'Connecteurs tiers') }}</h2>
+    <form (ngSubmit)="saveConnection()" class="form">
+      <div class="split">
+        <input
+          pInputText
+          [(ngModel)]="connectionName"
+          name="connectionName"
+          [placeholder]="text('Connection name', 'Nom de la connexion')"
+        /><input
+          pInputText
+          [(ngModel)]="connectionUrl"
+          name="connectionUrl"
+          placeholder="https://api.example.com/health"
+        />
+      </div>
+      <input
+        pInputText
+        type="password"
+        [(ngModel)]="connectionBearer"
+        name="bearer"
+        [placeholder]="text('Bearer token (encrypted)', 'Jeton Bearer (chiffré)')"
+      /><button pButton type="submit">
+        {{ text('Save connector', 'Enregistrer le connecteur') }}
+      </button>
+    </form>
+    <ul>
+      @for (connection of connections(); track connection.id) {
+        <li>
+          <div>
+            <strong>{{ connection.name }}</strong
+            ><p-tag
+              [value]="connection.status"
+              [severity]="
+                connection.status === 'Connected'
+                  ? 'success'
+                  : connection.status === 'Error'
+                    ? 'danger'
+                    : 'secondary'
+              "
+            /><small>
+              @if (connection.nextRetryAt) {
+                {{ text('Retry scheduled', 'Nouvelle tentative planifiée') }} ·
+              }
+              {{ connection.lastError }}</small
+            >
+          </div>
+          <button
+            pButton
+            type="button"
+            size="small"
+            severity="secondary"
+            (click)="testConnection(connection.id)"
+          >
+            {{ text('Test with retry', 'Tester avec nouvelle tentative') }}
+          </button>
+        </li>
+      }
+    </ul>
+  </section>
+  <section class="content-panel">
+    <p class="eyebrow">07</p>
+    <h2>{{ text('Optional AI assistance', 'Assistance IA facultative') }}</h2>
+    <p-message severity="info">{{
+      text(
+        'Only bounded ticket text is used. Attachments and requester contact details are excluded. Every output remains a draft requiring human review.',
+        'Seul le texte limité du ticket est utilisé. Les pièces jointes et les coordonnées du demandeur sont exclues. Chaque résultat reste un brouillon nécessitant une révision humaine.'
+      )
+    }}</p-message>
+    <form (ngSubmit)="saveAi()" class="form">
+      <div class="checks">
+        <p-checkbox
+          [(ngModel)]="ai.isEnabled"
+          name="aiEnabled"
+          [binary]="true"
+          inputId="aiEnabled"
+        /><label for="aiEnabled">{{
+          text('Explicitly enable assistance', "Activer explicitement l'assistance")
+        }}</label>
+        <p-checkbox
+          [(ngModel)]="ai.providerDoesNotTrain"
+          name="nonTraining"
+          [binary]="true"
+          inputId="nonTraining"
+        /><label for="nonTraining">{{
+          text(
+            'Provider contractually does not train on this data',
+            "Le fournisseur ne s'entraîne contractuellement pas sur ces données"
+          )
+        }}</label>
+      </div>
+      <p-multiselect [(ngModel)]="ai.allowedKinds" name="aiKinds" [options]="aiKinds" /><button
+        pButton
+        type="submit"
+      >
+        {{ text('Save AI safeguards', "Enregistrer les protections de l'IA") }}
+      </button>
+    </form>
+  </section>
+</div>

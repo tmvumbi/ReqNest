@@ -12,7 +12,9 @@ using ReqNest.Core.Notifications;
 using ReqNest.Core.Reports;
 using ReqNest.Core.Tenancy;
 using ReqNest.Core.Identity;
+using ReqNest.Core.Integrations;
 using ReqNest.Infrastructure.Identity;
+using ReqNest.Infrastructure.Integrations;
 using ReqNest.Infrastructure.Content;
 using ReqNest.Infrastructure.Configuration;
 using ReqNest.Infrastructure.Notifications;
@@ -44,6 +46,7 @@ public static class DependencyInjection
         services.AddScoped<ISessionValidationService>(serviceProvider =>
             serviceProvider.GetRequiredService<AuthenticationService>());
         services.AddScoped<ITenantAuthorizationService, TenantAuthorizationService>();
+        services.AddScoped<IWebhookEventPublisher, WebhookEventPublisher>();
         services.AddSingleton<IRichContentSanitizer, RichContentSanitizer>();
         services.AddScoped<ISlaCalculator, SlaCalculator>();
         services.AddScoped<INotificationService, NotificationService>();
