@@ -1,0 +1,133 @@
+<header class="page-heading compact">
+  <div>
+    <p class="eyebrow">{{ i18n.text('nav.tickets') }}</p>
+    <h1>{{ i18n.text('tickets.new') }}</h1>
+    <p>{{ i18n.text('tickets.summary') }}</p>
+  </div>
+</header>
+<form [formGroup]="form" (ngSubmit)="create()" class="content-panel ticket-form">
+  <div class="field">
+    <label for="ticketProject">{{ i18n.text('common.project') }}</label
+    ><p-select
+      inputId="ticketProject"
+      formControlName="projectId"
+      [options]="projects()"
+      optionValue="id"
+      ><ng-template #selectedItem let-project>{{ project ? projectName(project) : '' }}</ng-template
+      ><ng-template #item let-project>{{ projectName(project) }}</ng-template></p-select
+    >
+  </div>
+  <div class="field">
+    <label for="ticketTitle">{{ i18n.text('tickets.titleField') }}</label
+    ><input pInputText id="ticketTitle" formControlName="title" maxlength="300" />
+  </div>
+  <div class="field">
+    <label for="ticketDescription">{{ i18n.text('tickets.description') }}</label
+    ><p-editor
+      formControlName="description"
+      [formats]="editorFormats"
+      [style]="{ height: '18rem' }"
+      [placeholder]="i18n.text('tickets.description')"
+      ><ng-template #header
+        ><span class="ql-formats"
+          ><button
+            type="button"
+            class="ql-header"
+            value="2"
+            [attr.aria-label]="i18n.language() === 'French' ? 'Titre niveau 2' : 'Heading level 2'"
+          ></button
+          ><button
+            type="button"
+            class="ql-header"
+            value="3"
+            [attr.aria-label]="i18n.language() === 'French' ? 'Titre niveau 3' : 'Heading level 3'"
+          ></button
+          ><button
+            type="button"
+            class="ql-bold"
+            [attr.aria-label]="i18n.language() === 'French' ? 'Gras' : 'Bold'"
+          ></button
+          ><button
+            type="button"
+            class="ql-italic"
+            [attr.aria-label]="i18n.language() === 'French' ? 'Italique' : 'Italic'"
+          ></button
+          ><button
+            type="button"
+            class="ql-strike"
+            [attr.aria-label]="i18n.language() === 'French' ? 'Barré' : 'Strikethrough'"
+          ></button
+          ><button
+            type="button"
+            class="ql-list"
+            value="ordered"
+            [attr.aria-label]="i18n.language() === 'French' ? 'Liste numérotée' : 'Ordered list'"
+          ></button
+          ><button
+            type="button"
+            class="ql-list"
+            value="bullet"
+            [attr.aria-label]="i18n.language() === 'French' ? 'Liste à puces' : 'Bullet list'"
+          ></button
+          ><button
+            type="button"
+            class="ql-blockquote"
+            [attr.aria-label]="i18n.language() === 'French' ? 'Citation' : 'Block quote'"
+          ></button
+          ><button
+            type="button"
+            class="ql-code-block"
+            [attr.aria-label]="i18n.language() === 'French' ? 'Bloc de code' : 'Code block'"
+          ></button
+          ><button
+            type="button"
+            class="ql-link"
+            [attr.aria-label]="i18n.language() === 'French' ? 'Lien' : 'Link'"
+          ></button
+          ><button
+            type="button"
+            class="ql-clean"
+            [attr.aria-label]="
+              i18n.language() === 'French' ? 'Effacer la mise en forme' : 'Clear formatting'
+            "
+          ></button></span></ng-template
+    ></p-editor>
+  </div>
+  <div class="field-row">
+    <div class="field">
+      <label for="ticketType">{{ i18n.text('tickets.type') }}</label
+      ><p-select inputId="ticketType" formControlName="type" [options]="types">
+        <ng-template #selectedItem let-option>{{ i18n.ticketType(option) }}</ng-template>
+        <ng-template #item let-option>{{ i18n.ticketType(option) }}</ng-template>
+      </p-select>
+    </div>
+    <div class="field">
+      <label for="ticketPriority">{{ i18n.text('common.priority') }}</label
+      ><p-select inputId="ticketPriority" formControlName="priority" [options]="priorities">
+        <ng-template #selectedItem let-option>{{ i18n.ticketPriority(option) }}</ng-template>
+        <ng-template #item let-option>{{ i18n.ticketPriority(option) }}</ng-template>
+      </p-select>
+    </div>
+    <div class="field">
+      <label for="ticketDue">{{ i18n.text('tickets.due') }}</label
+      ><p-datepicker
+        inputId="ticketDue"
+        formControlName="dueAt"
+        [showTime]="true"
+        [showIcon]="true"
+      />
+    </div>
+  </div>
+  <div class="field">
+    <label for="ticketLabels">{{ i18n.text('tickets.labels') }}</label
+    ><input pInputText id="ticketLabels" formControlName="labels" />
+  </div>
+  <div class="form-actions">
+    <a pButton severity="secondary" [outlined]="true" routerLink="/app/tickets">{{
+      i18n.text('common.cancel')
+    }}</a
+    ><button pButton type="submit" [loading]="submitting()">
+      {{ i18n.text('tickets.create') }}
+    </button>
+  </div>
+</form>

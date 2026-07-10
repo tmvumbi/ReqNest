@@ -1,0 +1,124 @@
+<div class="app-frame" [class.navigation-open]="navigationOpen()">
+  <a class="skip-link" href="#main-content" (click)="skipToContent($event)">{{
+    i18n.text('nav.skip')
+  }}</a>
+  <aside class="sidebar" aria-label="Primary navigation">
+    <a routerLink="/app/dashboard" class="brand" (click)="closeNavigation()">
+      @if (
+        theme.darkActive() ? darkLogoUrl() || lightLogoUrl() : lightLogoUrl() || darkLogoUrl();
+        as logoUrl
+      ) {
+        <img class="brand-logo" [src]="logoUrl" alt="" />
+      } @else {
+        <span class="brand-mark" aria-hidden="true">{{
+          store.activeTenant()?.tenantShortName?.slice(0, 1) || 'R'
+        }}</span>
+      }
+      <span>{{ store.activeTenant()?.tenantName || 'ReqNest' }}</span>
+    </a>
+    <div class="active-tenant">
+      <span>{{ store.activeTenant()?.tenantShortName }}</span>
+      <strong>{{ store.activeTenant()?.tenantName }}</strong>
+    </div>
+    <nav>
+      <a routerLink="/app/dashboard" routerLinkActive="active" (click)="closeNavigation()">{{
+        i18n.text('nav.dashboard')
+      }}</a>
+      <a routerLink="/app/tickets" routerLinkActive="active" (click)="closeNavigation()">{{
+        i18n.text('nav.tickets')
+      }}</a>
+      <a routerLink="/app/projects" routerLinkActive="active" (click)="closeNavigation()">{{
+        i18n.text('nav.projects')
+      }}</a>
+      <a routerLink="/app/reports" routerLinkActive="active" (click)="closeNavigation()">{{
+        i18n.text('nav.reports')
+      }}</a>
+      <a routerLink="/app/notifications" routerLinkActive="active" (click)="closeNavigation()">
+        <span>{{ i18n.text('nav.notifications') }}</span>
+        @if (unreadCount() > 0) {
+          <p-badge [value]="unreadCount().toString()" />
+        }
+      </a>
+      @if (store.canManageProjects()) {
+        <span class="nav-section">Admin</span>
+        <a routerLink="/app/admin/users" routerLinkActive="active" (click)="closeNavigation()">{{
+          i18n.text('nav.users')
+        }}</a>
+        <a
+          routerLink="/app/admin/workflows"
+          routerLinkActive="active"
+          (click)="closeNavigation()"
+          >{{ i18n.text('nav.workflows') }}</a
+        >
+      }
+      @if (store.isAdministrator()) {
+        <a routerLink="/app/admin/settings" routerLinkActive="active" (click)="closeNavigation()">{{
+          i18n.text('nav.settings')
+        }}</a>
+        <a routerLink="/app/admin/audit" routerLinkActive="active" (click)="closeNavigation()">{{
+          i18n.text('nav.audit')
+        }}</a>
+      }
+    </nav>
+  </aside>
+
+  <button
+    class="scrim"
+    type="button"
+    aria-label="Close navigation"
+    (click)="closeNavigation()"
+  ></button>
+
+  <section class="workspace">
+    <header class="topbar">
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [text]="true"
+        class="menu-button"
+        (click)="navigationOpen.set(true)"
+        [attr.aria-label]="i18n.text('nav.menu')"
+      >
+        ☰
+      </button>
+      @if (store.session()!.tenants.length > 1) {
+        <p-select
+          [options]="store.session()!.tenants"
+          optionLabel="tenantName"
+          optionValue="tenantId"
+          [ngModel]="store.activeTenantId()"
+          (ngModelChange)="switchTenant($event)"
+          ariaLabel="Active company"
+        />
+      } @else {
+        <strong>{{ store.activeTenant()?.tenantName }}</strong>
+      }
+      <div class="topbar-actions">
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [text]="true"
+          (click)="setLanguage()"
+          [attr.aria-label]="i18n.text('nav.language')"
+        >
+          {{ i18n.language() === 'English' ? 'FR' : 'EN' }}
+        </button>
+        <p-select
+          [options]="themeOptions"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="theme.preference()"
+          (ngModelChange)="setTheme($event)"
+          [ariaLabel]="i18n.text('nav.theme')"
+        />
+        <span class="user-name">{{ store.session()?.displayName }}</span>
+        <button pButton type="button" severity="secondary" [outlined]="true" (click)="signOut()">
+          {{ i18n.text('nav.signOut') }}
+        </button>
+      </div>
+    </header>
+    <main id="main-content" tabindex="-1"><router-outlet /></main>
+  </section>
+</div>

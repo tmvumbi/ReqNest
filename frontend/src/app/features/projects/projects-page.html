@@ -1,0 +1,201 @@
+<header class="page-heading">
+  <div>
+    <p class="eyebrow">{{ i18n.text('nav.projects') }}</p>
+    <h1>{{ i18n.text('projects.title') }}</h1>
+    <p>{{ i18n.text('projects.summary') }}</p>
+  </div>
+  @if (store.canManageProjects()) {
+    <button pButton type="button" (click)="openCreate()">{{ i18n.text('projects.new') }}</button>
+  }
+</header>
+<section class="content-panel">
+  <p-table
+    [value]="projects()"
+    [loading]="loading()"
+    [tableStyle]="{ 'min-width': '50rem' }"
+    aria-label="Projects"
+  >
+    <ng-template #header
+      ><tr>
+        <th>{{ i18n.text('projects.key') }}</th>
+        <th>{{ i18n.text('projects.title') }}</th>
+        <th>{{ i18n.text('projects.workflow') }}</th>
+        <th>{{ i18n.text('common.priority') }}</th>
+        <th>{{ i18n.text('common.status') }}</th>
+        <th>{{ i18n.text('common.actions') }}</th>
+      </tr></ng-template
+    >
+    <ng-template #body let-project
+      ><tr>
+        <td>
+          <strong>{{ project.key }}</strong>
+        </td>
+        <td>{{ name(project) }}</td>
+        <td>{{ workflowName(project.workflowId) }}</td>
+        <td>{{ i18n.ticketPriority(project.defaultPriority) }}</td>
+        <td>
+          <p-tag
+            [value]="
+              project.isArchived ? i18n.text('projects.archived') : i18n.text('projects.active')
+            "
+            [severity]="project.isArchived ? 'secondary' : 'success'"
+          />
+        </td>
+        <td>
+          <button
+            pButton
+            type="button"
+            [text]="true"
+            severity="secondary"
+            (click)="showOverview(project)"
+          >
+            {{ i18n.language() === 'French' ? 'Aperçu' : 'Overview' }}
+          </button>
+          @if (store.canManageProjects()) {
+            <button
+              pButton
+              type="button"
+              [text]="true"
+              severity="secondary"
+              (click)="openEdit(project)"
+            >
+              {{ i18n.text('common.edit') }}</button
+            ><button
+              pButton
+              type="button"
+              [text]="true"
+              severity="secondary"
+              (click)="toggleArchived(project)"
+            >
+              {{ project.isArchived ? i18n.text('common.restore') : i18n.text('common.archive') }}
+            </button>
+          }
+        </td>
+      </tr></ng-template
+    >
+    <ng-template #emptymessage
+      ><tr>
+        <td colspan="6">{{ i18n.text('common.empty') }}</td>
+      </tr></ng-template
+    >
+  </p-table>
+</section>
+<p-dialog
+  [header]="editing() ? i18n.text('common.edit') : i18n.text('projects.new')"
+  [visible]="dialogVisible()"
+  (visibleChange)="dialogVisible.set($event)"
+  [modal]="true"
+  [style]="{ width: 'min(42rem, 94vw)' }"
+>
+  <form [formGroup]="form" (ngSubmit)="submit()" class="dialog-form">
+    <div class="field">
+      <label for="projectKey">{{ i18n.text('projects.key') }}</label
+      ><input pInputText id="projectKey" formControlName="key" maxlength="12" />
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="projectEnglish">{{ i18n.text('projects.nameEnglish') }}</label
+        ><input pInputText id="projectEnglish" formControlName="nameEnglish" />
+      </div>
+      <div class="field">
+        <label for="projectFrench">{{ i18n.text('projects.nameFrench') }}</label
+        ><input pInputText id="projectFrench" formControlName="nameFrench" />
+      </div>
+    </div>
+    <div class="field">
+      <label for="projectDescription">{{ i18n.text('projects.description') }}</label
+      ><textarea
+        pTextarea
+        id="projectDescription"
+        formControlName="description"
+        rows="4"
+      ></textarea>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="workflow">{{ i18n.text('projects.workflow') }}</label
+        ><p-select
+          inputId="workflow"
+          formControlName="workflowId"
+          [options]="workflows()"
+          optionLabel="name"
+          optionValue="id"
+          [showClear]="true"
+        />
+      </div>
+      <div class="field">
+        <label for="defaultPriority">{{ i18n.text('common.priority') }}</label
+        ><p-select
+          inputId="defaultPriority"
+          formControlName="defaultPriority"
+          [options]="priorities"
+          ><ng-template #selectedItem let-option>{{ i18n.ticketPriority(option) }}</ng-template>
+          <ng-template #item let-option>{{ i18n.ticketPriority(option) }}</ng-template></p-select
+        >
+      </div>
+    </div>
+    <div class="field">
+      <label for="defaultAssignee">{{
+        i18n.language() === 'French' ? 'Responsable par défaut' : 'Default assignee'
+      }}</label
+      ><p-select
+        inputId="defaultAssignee"
+        formControlName="defaultAssigneeUserId"
+        [options]="eligibleMembers(editing())"
+        optionLabel="displayName"
+        optionValue="userId"
+        [showClear]="true"
+      />
+    </div>
+    <div class="dialog-actions">
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [text]="true"
+        (click)="dialogVisible.set(false)"
+      >
+        {{ i18n.text('common.cancel') }}</button
+      ><button pButton type="submit" [loading]="submitting()">
+        {{ i18n.text('common.save') }}
+      </button>
+    </div>
+  </form>
+</p-dialog>
+<p-dialog
+  [header]="i18n.language() === 'French' ? 'Aperçu du projet' : 'Project overview'"
+  [visible]="overviewVisible()"
+  (visibleChange)="overviewVisible.set($event)"
+  [modal]="true"
+  [style]="{ width: 'min(42rem, 94vw)' }"
+>
+  @if (overview(); as data) {
+    <div class="overview-metrics">
+      <article>
+        <strong>{{ data.unassigned }}</strong
+        ><span>{{ i18n.text('tickets.unassigned') }}</span>
+      </article>
+      <article>
+        <strong>{{ data.overdue }}</strong
+        ><span>{{ i18n.text('tickets.overdue') }}</span>
+      </article>
+    </div>
+    <h3>{{ i18n.text('common.status') }}</h3>
+    <ul>
+      @for (status of data.byStatus; track status.statusId) {
+        <li>
+          {{ i18n.language() === 'French' ? status.labelFrench : status.labelEnglish }} ·
+          {{ status.count }}
+        </li>
+      }
+    </ul>
+    <h3>{{ i18n.language() === 'French' ? 'Tickets récents' : 'Recent tickets' }}</h3>
+    <ul>
+      @for (ticket of data.recentlyUpdated; track ticket.id) {
+        <li>{{ ticket.key }} · {{ ticket.title }}</li>
+      } @empty {
+        <li>{{ i18n.text('common.empty') }}</li>
+      }
+    </ul>
+  }
+</p-dialog>

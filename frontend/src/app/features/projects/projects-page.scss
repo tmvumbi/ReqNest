@@ -1,0 +1,32 @@
+.dialog-form,
+.field {
+  display: grid;
+  gap: 0.5rem;
+}
+.dialog-form {
+  gap: 1rem;
+}
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+input,
+textarea,
+p-select {
+  width: 100%;
+}
+label {
+  font-weight: 700;
+}
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+@media (max-width: 620px) {
+  .field-row {
+    grid-template-columns: 1fr;
+  }
+}

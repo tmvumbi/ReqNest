@@ -9,4 +9,6 @@ public sealed class BlobStorageOptions
     public Uri? ServiceUri { get; init; }
 
     public string DefaultContainer { get; init; } = "requirements";
+
+    public bool MarkDevelopmentUploadsClean { get; init; }
 }

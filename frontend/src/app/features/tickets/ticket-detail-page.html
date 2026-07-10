@@ -1,0 +1,437 @@
+@if (loading()) {
+  <p class="state-message">{{ i18n.text('common.loading') }}</p>
+}
+@if (error()) {
+  <p-message severity="error" role="alert">{{ i18n.text('common.error') }}</p-message>
+}
+@if (ticket(); as item) {
+  <header class="page-heading compact">
+    <div>
+      <a routerLink="/app/tickets" class="back-link">← {{ i18n.text('tickets.title') }}</a>
+      <p class="eyebrow">{{ item.key }}</p>
+      <h1>{{ item.title }}</h1>
+      <div class="ticket-meta">
+        <p-tag
+          [value]="i18n.language() === 'French' ? item.statusLabelFrench : item.statusLabelEnglish"
+          severity="secondary"
+        /><p-tag
+          [value]="i18n.ticketPriority(item.priority)"
+          [severity]="
+            item.priority === 'Urgent' ? 'danger' : item.priority === 'High' ? 'warn' : 'info'
+          "
+        /><span>{{ item.assigneeDisplayName || i18n.text('tickets.unassigned') }}</span>
+      </div>
+    </div>
+    <div class="heading-actions">
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [outlined]="true"
+        (click)="toggleWatching(item)"
+      >
+        {{
+          isWatching(item)
+            ? i18n.language() === 'French'
+              ? 'Ne plus suivre'
+              : 'Unwatch'
+            : i18n.language() === 'French'
+              ? 'Suivre'
+              : 'Watch'
+        }}
+      </button>
+      @if (isWatching(item)) {
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          (click)="toggleMute(item)"
+        >
+          {{
+            isMuted(item)
+              ? i18n.language() === 'French'
+                ? 'Réactiver'
+                : 'Unmute'
+              : i18n.language() === 'French'
+                ? 'Mettre en sourdine'
+                : 'Mute'
+          }}
+        </button>
+      }
+      @if (store.canMaintainTickets()) {
+        <button pButton type="button" (click)="openEdit()">{{ i18n.text('common.edit') }}</button>
+      }
+      @if (store.canManageProjects()) {
+        <button pButton type="button" severity="secondary" (click)="setArchived(!item.isArchived)">
+          {{ item.isArchived ? i18n.text('common.restore') : i18n.text('common.archive') }}
+        </button>
+      }
+    </div>
+  </header>
+  <div class="detail-grid">
+    <div class="main-column">
+      <section class="content-panel">
+        <div class="section-heading">
+          <h2>{{ i18n.text('tickets.description') }}</h2>
+        </div>
+        <div class="rich-content" [innerHTML]="item.description"></div>
+      </section>
+      <section class="content-panel">
+        <div class="section-heading">
+          <h2>{{ i18n.text('tickets.comments') }}</h2>
+        </div>
+        <div class="comment-list">
+          @for (comment of comments(); track comment.id) {
+            <article>
+              <header>
+                <strong>{{ comment.authorDisplayName }}</strong
+                ><time>{{ comment.createdAt | localizedDate: 'medium' }}</time>
+              </header>
+              @if (comment.isDeleted) {
+                <em>—</em>
+              } @else {
+                <div class="rich-content" [innerHTML]="comment.body"></div>
+              }
+            </article>
+          } @empty {
+            <p class="state-message">{{ i18n.text('common.empty') }}</p>
+          }
+        </div>
+        <form [formGroup]="commentForm" (ngSubmit)="addComment()" class="comment-form">
+          <span id="commentEditorLabel" class="field-label">{{
+            i18n.text('tickets.addComment')
+          }}</span
+          ><p-editor
+            formControlName="body"
+            [formats]="editorFormats"
+            [style]="{ height: '10rem' }"
+            [placeholder]="i18n.text('tickets.commentPlaceholder')"
+            (onEditorInit)="labelEditor($event, 'commentEditorLabel')"
+            ><ng-template #header
+              ><span class="ql-formats"
+                ><button
+                  type="button"
+                  class="ql-header"
+                  value="2"
+                  [attr.aria-label]="
+                    i18n.language() === 'French' ? 'Titre niveau 2' : 'Heading level 2'
+                  "
+                ></button
+                ><button
+                  type="button"
+                  class="ql-header"
+                  value="3"
+                  [attr.aria-label]="
+                    i18n.language() === 'French' ? 'Titre niveau 3' : 'Heading level 3'
+                  "
+                ></button
+                ><button
+                  type="button"
+                  class="ql-bold"
+                  [attr.aria-label]="i18n.language() === 'French' ? 'Gras' : 'Bold'"
+                ></button
+                ><button
+                  type="button"
+                  class="ql-italic"
+                  [attr.aria-label]="i18n.language() === 'French' ? 'Italique' : 'Italic'"
+                ></button
+                ><button
+                  type="button"
+                  class="ql-strike"
+                  [attr.aria-label]="i18n.language() === 'French' ? 'Barré' : 'Strikethrough'"
+                ></button
+                ><button
+                  type="button"
+                  class="ql-list"
+                  value="ordered"
+                  [attr.aria-label]="
+                    i18n.language() === 'French' ? 'Liste numérotée' : 'Ordered list'
+                  "
+                ></button
+                ><button
+                  type="button"
+                  class="ql-list"
+                  value="bullet"
+                  [attr.aria-label]="i18n.language() === 'French' ? 'Liste à puces' : 'Bullet list'"
+                ></button
+                ><button
+                  type="button"
+                  class="ql-blockquote"
+                  [attr.aria-label]="i18n.language() === 'French' ? 'Citation' : 'Block quote'"
+                ></button
+                ><button
+                  type="button"
+                  class="ql-code-block"
+                  [attr.aria-label]="i18n.language() === 'French' ? 'Bloc de code' : 'Code block'"
+                ></button
+                ><button
+                  type="button"
+                  class="ql-link"
+                  [attr.aria-label]="i18n.language() === 'French' ? 'Lien' : 'Link'"
+                ></button
+                ><button
+                  type="button"
+                  class="ql-clean"
+                  [attr.aria-label]="
+                    i18n.language() === 'French' ? 'Effacer la mise en forme' : 'Clear formatting'
+                  "
+                ></button></span></ng-template
+          ></p-editor>
+          @if (eligibleMembers(item).length) {
+            <div class="field">
+              <label for="mentions">{{
+                i18n.language() === 'French' ? 'Mentionner des personnes' : 'Mention people'
+              }}</label>
+              <p-multiselect
+                inputId="mentions"
+                formControlName="mentionUserIds"
+                [options]="eligibleMembers(item)"
+                optionLabel="displayName"
+                optionValue="userId"
+                [placeholder]="
+                  i18n.language() === 'French' ? 'Choisir des personnes' : 'Choose people'
+                "
+              />
+            </div>
+          }
+          <button pButton type="submit" [loading]="submittingComment()">
+            {{ i18n.text('tickets.addComment') }}
+          </button>
+        </form>
+      </section>
+    </div>
+    <aside class="side-column">
+      <section class="content-panel">
+        <h2>{{ i18n.text('tickets.transition') }}</h2>
+        <div class="transition-list">
+          @if (store.canMaintainTickets()) {
+            @for (status of allowedStatuses(); track status.id) {
+              <button
+                pButton
+                type="button"
+                severity="secondary"
+                [outlined]="true"
+                (click)="transition(status)"
+              >
+                {{ statusLabel(status) }}
+              </button>
+            } @empty {
+              <p class="state-message">{{ i18n.text('common.empty') }}</p>
+            }
+          } @else {
+            <p class="state-message">
+              {{ i18n.language() === 'French' ? 'Accès en lecture seule.' : 'Read-only access.' }}
+            </p>
+          }
+        </div>
+      </section>
+      <section class="content-panel">
+        <h2>{{ i18n.text('tickets.details') }}</h2>
+        <dl>
+          <div>
+            <dt>{{ i18n.text('common.project') }}</dt>
+            <dd>
+              {{ i18n.language() === 'French' ? item.projectNameFrench : item.projectNameEnglish }}
+            </dd>
+          </div>
+          <div>
+            <dt>{{ i18n.text('tickets.type') }}</dt>
+            <dd>{{ i18n.ticketType(item.type) }}</dd>
+          </div>
+          <div>
+            <dt>{{ i18n.text('tickets.reporter') }}</dt>
+            <dd>{{ item.reporterDisplayName }}</dd>
+          </div>
+          <div>
+            <dt>{{ i18n.text('tickets.due') }}</dt>
+            <dd>{{ item.dueAt ? (item.dueAt | localizedDate: 'medium') : '—' }}</dd>
+          </div>
+        </dl>
+      </section>
+      <section class="content-panel">
+        <h2>{{ i18n.text('tickets.attachments') }}</h2>
+        @if (store.canMaintainTickets()) {
+          <label class="file-button"
+            ><input
+              type="file"
+              (change)="upload($event)"
+              [disabled]="uploading()"
+              accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.docx,.xlsx,.pptx,.odt,.ods,.odp,.txt,.csv,.json,.xml,.md"
+            />{{ uploading() ? i18n.text('common.loading') : i18n.text('tickets.upload') }}</label
+          >
+        }
+        <ul class="attachment-list">
+          @for (attachment of attachments(); track attachment.id) {
+            <li>
+              <div>
+                <strong>{{ attachment.fileName }}</strong
+                ><small
+                  >{{ attachment.size / 1024 | number: '1.0-1' }} KB ·
+                  {{ displayScanStatus(attachment.scanStatus) }}</small
+                >
+              </div>
+              <div class="attachment-actions">
+                <button
+                  pButton
+                  type="button"
+                  size="small"
+                  severity="secondary"
+                  [disabled]="attachment.scanStatus !== 'Clean'"
+                  (click)="downloadAttachment(attachment)"
+                >
+                  {{ i18n.language() === 'French' ? 'Télécharger' : 'Download' }}
+                </button>
+                @if (store.canMaintainTickets()) {
+                  <button
+                    pButton
+                    type="button"
+                    size="small"
+                    severity="danger"
+                    [text]="true"
+                    (click)="deleteAttachment(attachment)"
+                  >
+                    {{ i18n.language() === 'French' ? 'Supprimer' : 'Delete' }}
+                  </button>
+                }
+              </div>
+            </li>
+          } @empty {
+            <li class="state-message">{{ i18n.text('common.empty') }}</li>
+          }
+        </ul>
+      </section>
+      <section class="content-panel">
+        <h2>{{ i18n.text('tickets.activity') }}</h2>
+        <ol class="activity-list">
+          @for (event of activity().slice(0, 20); track event.id) {
+            <li>
+              <span>{{ activitySummary(event) }}</span
+              ><time>{{ event.occurredAt | localizedDate: 'short' }}</time>
+            </li>
+          } @empty {
+            <li>{{ i18n.text('common.empty') }}</li>
+          }
+        </ol>
+      </section>
+    </aside>
+  </div>
+
+  <p-dialog
+    [visible]="editVisible()"
+    (visibleChange)="editVisible.set($event)"
+    [modal]="true"
+    [style]="{ width: 'min(48rem, 95vw)' }"
+    [header]="i18n.language() === 'French' ? 'Modifier le ticket' : 'Edit ticket'"
+  >
+    <form [formGroup]="editForm" (ngSubmit)="saveEdit()" class="edit-form">
+      <div class="field">
+        <label for="editTitle">{{ i18n.text('tickets.titleField') }}</label
+        ><input pInputText id="editTitle" formControlName="title" />
+      </div>
+      <div class="field">
+        <span id="descriptionEditorLabel" class="field-label">{{
+          i18n.text('tickets.description')
+        }}</span
+        ><p-editor
+          formControlName="description"
+          [formats]="editorFormats"
+          [style]="{ height: '12rem' }"
+          (onEditorInit)="labelEditor($event, 'descriptionEditorLabel')"
+          ><ng-template #header
+            ><span class="ql-formats"
+              ><button
+                type="button"
+                class="ql-header"
+                value="2"
+                [attr.aria-label]="
+                  i18n.language() === 'French' ? 'Titre niveau 2' : 'Heading level 2'
+                "
+              ></button
+              ><button
+                type="button"
+                class="ql-bold"
+                [attr.aria-label]="i18n.language() === 'French' ? 'Gras' : 'Bold'"
+              ></button
+              ><button
+                type="button"
+                class="ql-italic"
+                [attr.aria-label]="i18n.language() === 'French' ? 'Italique' : 'Italic'"
+              ></button
+              ><button
+                type="button"
+                class="ql-list"
+                value="bullet"
+                [attr.aria-label]="i18n.language() === 'French' ? 'Liste à puces' : 'Bullet list'"
+              ></button
+              ><button
+                type="button"
+                class="ql-link"
+                [attr.aria-label]="i18n.language() === 'French' ? 'Lien' : 'Link'"
+              ></button
+              ><button
+                type="button"
+                class="ql-clean"
+                [attr.aria-label]="
+                  i18n.language() === 'French' ? 'Effacer la mise en forme' : 'Clear formatting'
+                "
+              ></button></span></ng-template
+        ></p-editor>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="editType">{{ i18n.text('tickets.type') }}</label
+          ><p-select inputId="editType" formControlName="type" [options]="types">
+            <ng-template #selectedItem let-option>{{ i18n.ticketType(option) }}</ng-template>
+            <ng-template #item let-option>{{ i18n.ticketType(option) }}</ng-template>
+          </p-select>
+        </div>
+        <div class="field">
+          <label for="editPriority">{{ i18n.text('common.priority') }}</label
+          ><p-select inputId="editPriority" formControlName="priority" [options]="priorities">
+            <ng-template #selectedItem let-option>{{ i18n.ticketPriority(option) }}</ng-template>
+            <ng-template #item let-option>{{ i18n.ticketPriority(option) }}</ng-template>
+          </p-select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="editAssignee">{{ i18n.text('tickets.assignee') }}</label
+          ><p-select
+            inputId="editAssignee"
+            formControlName="assigneeUserId"
+            [options]="eligibleMembers(item)"
+            optionLabel="displayName"
+            optionValue="userId"
+            [showClear]="true"
+          />
+        </div>
+        <div class="field">
+          <label for="editDue">{{ i18n.text('tickets.due') }}</label
+          ><input id="editDue" type="datetime-local" formControlName="dueAt" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="editLabels">{{ i18n.text('tickets.labels') }}</label
+        ><input pInputText id="editLabels" formControlName="labels" />
+      </div>
+      <div class="field">
+        <label for="resolutionSummary">{{
+          i18n.language() === 'French' ? 'Résumé de résolution' : 'Resolution summary'
+        }}</label
+        ><textarea id="resolutionSummary" formControlName="resolutionSummary" rows="3"></textarea>
+      </div>
+      <div class="dialog-actions">
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [text]="true"
+          (click)="editVisible.set(false)"
+        >
+          {{ i18n.text('common.cancel') }}</button
+        ><button pButton type="submit" [loading]="saving()">{{ i18n.text('common.save') }}</button>
+      </div>
+    </form>
+  </p-dialog>
+}

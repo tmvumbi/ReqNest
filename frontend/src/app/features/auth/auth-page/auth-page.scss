@@ -1,0 +1,121 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  background: var(--app-background);
+}
+.auth-layout {
+  width: min(1120px, calc(100% - 2rem));
+  min-height: 100vh;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr minmax(320px, 28rem);
+  grid-template-rows: auto 1fr;
+  gap: 2rem 5rem;
+  align-items: center;
+  padding: 1.5rem 0 3rem;
+}
+.brand {
+  grid-column: 1 / -1;
+  display: inline-flex;
+  width: max-content;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--app-text);
+  text-decoration: none;
+  font-weight: 800;
+}
+.brand-mark {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border-radius: 0.85rem;
+  color: white;
+  background: var(--p-primary-color);
+  box-shadow: 0 0.75rem 2rem color-mix(in srgb, var(--p-primary-color) 26%, transparent);
+}
+.auth-copy h1 {
+  max-width: 10ch;
+  margin: 0 0 1.25rem;
+  font-size: clamp(3rem, 7vw, 6rem);
+  line-height: 0.95;
+  letter-spacing: -0.06em;
+}
+.auth-copy > p:last-child {
+  max-width: 34rem;
+  color: var(--app-text-muted);
+  font-size: 1.125rem;
+  line-height: 1.7;
+}
+.eyebrow {
+  color: var(--p-primary-color);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+form,
+.field {
+  display: grid;
+  gap: 0.5rem;
+}
+form {
+  gap: 1.1rem;
+}
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+label {
+  font-weight: 700;
+}
+input,
+p-select,
+p-password {
+  width: 100%;
+}
+small {
+  color: var(--app-text-muted);
+}
+.submit-button {
+  width: 100%;
+  justify-content: center;
+  margin-top: 0.25rem;
+}
+.auth-links {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.9rem;
+}
+.auth-links a {
+  color: var(--p-primary-color);
+}
+.language-button {
+  position: fixed;
+  right: 1rem;
+  top: 1rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.75rem;
+  color: var(--app-text);
+  background: var(--app-surface);
+  cursor: pointer;
+  font-weight: 800;
+}
+@media (max-width: 780px) {
+  .auth-layout {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  .auth-copy h1 {
+    font-size: clamp(2.8rem, 14vw, 4.5rem);
+  }
+}
+@media (max-width: 480px) {
+  .field-row {
+    grid-template-columns: 1fr;
+  }
+}

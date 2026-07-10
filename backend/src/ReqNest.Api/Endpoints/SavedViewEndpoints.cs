@@ -1,0 +1,191 @@
+using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using ReqNest.Core.Views;
+using ReqNest.Infrastructure.Persistence;
+
+namespace ReqNest.Api.Endpoints;
+
+public static class SavedViewEndpoints
+{
+    public static IEndpointRouteBuilder MapSavedViewEndpoints(this IEndpointRouteBuilder endpoints)
+    {
+        var group = endpoints.MapGroup("/api/saved-views")
+            .RequireAuthorization()
+            .WithTags("Saved views");
+        group.MapGet("/", ListAsync);
+        group.MapPost("/", CreateAsync);
+        group.MapPut("/{viewId:guid}", UpdateAsync);
+        group.MapDelete("/{viewId:guid}", DeleteAsync);
+        return endpoints;
+    }
+
+    private static async Task<IResult> ListAsync(
+        HttpContext httpContext,
+        ReqNestDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        if (httpContext.TenantAuthorization() is null)
+        {
+            return ApiProblems.TenantRequired(httpContext);
+        }
+
+        var userId = httpContext.User.UserId();
+        var views = await dbContext.SavedViews.AsNoTracking()
+            .Where(entity => entity.OwnerUserId == userId)
+            .OrderBy(entity => entity.Name)
+            .Select(entity => new SavedViewResponse(
+                entity.Id,
+                entity.Name,
+                entity.ProjectId,
+                entity.FiltersJson,
+                entity.SortJson,
+                entity.ColumnsJson,
+                entity.GroupBy))
+            .ToArrayAsync(cancellationToken);
+        return TypedResults.Ok<IReadOnlyCollection<SavedViewResponse>>(views);
+    }
+
+    private static async Task<IResult> CreateAsync(
+        SaveViewRequest request,
+        HttpContext httpContext,
+        ReqNestDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        var authorization = httpContext.TenantAuthorization();
+        if (authorization is null)
+        {
+            return ApiProblems.TenantRequired(httpContext);
+        }
+
+        var validation = Validate(request, authorization);
+        if (validation is not null)
+        {
+            return validation(httpContext);
+        }
+
+        var view = new SavedView
+        {
+            TenantId = authorization.TenantId,
+            OwnerUserId = httpContext.User.UserId(),
+            Name = request.Name.Trim(),
+            ProjectId = request.ProjectId,
+            FiltersJson = request.Filters.GetRawText(),
+            SortJson = request.Sort.GetRawText(),
+            ColumnsJson = request.Columns.GetRawText(),
+            GroupBy = request.GroupBy,
+        };
+        dbContext.SavedViews.Add(view);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return TypedResults.Created($"/api/saved-views/{view.Id}", ToResponse(view));
+    }
+
+    private static async Task<IResult> UpdateAsync(
+        Guid viewId,
+        SaveViewRequest request,
+        HttpContext httpContext,
+        ReqNestDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        var authorization = httpContext.TenantAuthorization();
+        if (authorization is null)
+        {
+            return ApiProblems.TenantRequired(httpContext);
+        }
+
+        var validation = Validate(request, authorization);
+        if (validation is not null)
+        {
+            return validation(httpContext);
+        }
+
+        var userId = httpContext.User.UserId();
+        var view = await dbContext.SavedViews.SingleOrDefaultAsync(
+            entity => entity.Id == viewId && entity.OwnerUserId == userId,
+            cancellationToken);
+        if (view is null)
+        {
+            return ApiProblems.NotFound(httpContext, "Saved view");
+        }
+
+        view.Name = request.Name.Trim();
+        view.ProjectId = request.ProjectId;
+        view.FiltersJson = request.Filters.GetRawText();
+        view.SortJson = request.Sort.GetRawText();
+        view.ColumnsJson = request.Columns.GetRawText();
+        view.GroupBy = request.GroupBy;
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return TypedResults.Ok(ToResponse(view));
+    }
+
+    private static async Task<IResult> DeleteAsync(
+        Guid viewId,
+        HttpContext httpContext,
+        ReqNestDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        if (httpContext.TenantAuthorization() is null)
+        {
+            return ApiProblems.TenantRequired(httpContext);
+        }
+
+        var userId = httpContext.User.UserId();
+        var view = await dbContext.SavedViews.SingleOrDefaultAsync(
+            entity => entity.Id == viewId && entity.OwnerUserId == userId,
+            cancellationToken);
+        if (view is null)
+        {
+            return ApiProblems.NotFound(httpContext, "Saved view");
+        }
+
+        dbContext.SavedViews.Remove(view);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return TypedResults.NoContent();
+    }
+
+    private static Func<HttpContext, IResult>? Validate(SaveViewRequest request, Core.Identity.TenantAuthorization authorization)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length > 120)
+        {
+            return context => ApiProblems.Validation(context, "A view name of up to 120 characters is required.");
+        }
+
+        if (request.ProjectId is not null && !authorization.CanAccessProject(request.ProjectId.Value))
+        {
+            return context => ApiProblems.NotFound(context, "Project");
+        }
+
+        if (request.Filters.ValueKind != JsonValueKind.Object || request.Sort.ValueKind != JsonValueKind.Object ||
+            request.Columns.ValueKind != JsonValueKind.Array)
+        {
+            return context => ApiProblems.Validation(context, "Filters, sorting, and columns have invalid structures.");
+        }
+
+        return null;
+    }
+
+    private static SavedViewResponse ToResponse(SavedView entity) => new(
+        entity.Id,
+        entity.Name,
+        entity.ProjectId,
+        entity.FiltersJson,
+        entity.SortJson,
+        entity.ColumnsJson,
+        entity.GroupBy);
+}
+
+public sealed record SaveViewRequest(
+    string Name,
+    Guid? ProjectId,
+    JsonElement Filters,
+    JsonElement Sort,
+    JsonElement Columns,
+    string? GroupBy);
+
+public sealed record SavedViewResponse(
+    Guid Id,
+    string Name,
+    Guid? ProjectId,
+    string FiltersJson,
+    string SortJson,
+    string ColumnsJson,
+    string? GroupBy);

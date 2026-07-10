@@ -1,0 +1,126 @@
+<main class="auth-layout">
+  <a routerLink="/" class="brand" aria-label="ReqNest home">
+    <span class="brand-mark" aria-hidden="true">R</span>
+    <span>ReqNest</span>
+  </a>
+
+  <section class="auth-copy" aria-labelledby="auth-heading">
+    <p class="eyebrow">{{ i18n.text('app.tagline') }}</p>
+    @if (mode === 'login') {
+      <h1 id="auth-heading">{{ i18n.text('auth.welcome') }}</h1>
+      <p>{{ i18n.text('auth.signInSummary') }}</p>
+    } @else if (mode === 'register') {
+      <h1 id="auth-heading">{{ i18n.text('auth.createCompany') }}</h1>
+      <p>{{ i18n.text('projects.summary') }}</p>
+    } @else {
+      <h1 id="auth-heading">{{ i18n.text('auth.resetTitle') }}</h1>
+      <p>{{ i18n.text('auth.resetHelp') }}</p>
+    }
+  </section>
+
+  <p-card styleClass="auth-card">
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      @if (mode === 'register') {
+        <div class="field">
+          <label for="companyName">{{ i18n.text('auth.companyName') }}</label>
+          <input
+            pInputText
+            id="companyName"
+            formControlName="companyName"
+            autocomplete="organization"
+          />
+          @if (form.controls.companyName.touched && form.controls.companyName.invalid) {
+            <p-message severity="error" size="small" variant="simple">{{
+              i18n.text('auth.required')
+            }}</p-message>
+          }
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="companyShortName">{{ i18n.text('auth.shortName') }}</label>
+            <input
+              pInputText
+              id="companyShortName"
+              formControlName="companyShortName"
+              maxlength="40"
+            />
+          </div>
+          <div class="field">
+            <label id="language-label" for="language">{{ i18n.text('nav.language') }}</label>
+            <p-select
+              inputId="language"
+              formControlName="language"
+              [options]="languages"
+              optionLabel="label"
+              optionValue="value"
+              ariaLabelledBy="language-label"
+            />
+          </div>
+        </div>
+        <div class="field">
+          <label for="displayName">{{ i18n.text('auth.displayName') }}</label>
+          <input pInputText id="displayName" formControlName="displayName" autocomplete="name" />
+        </div>
+      }
+
+      <div class="field">
+        <label for="email">{{ i18n.text('auth.email') }}</label>
+        <input pInputText id="email" type="email" formControlName="email" autocomplete="email" />
+        @if (form.controls.email.touched && form.controls.email.invalid) {
+          <p-message severity="error" size="small" variant="simple">{{
+            i18n.text('auth.emailInvalid')
+          }}</p-message>
+        }
+      </div>
+
+      @if (mode !== 'reset') {
+        <div class="field">
+          <label for="password">{{ i18n.text('auth.password') }}</label>
+          <p-password
+            inputId="password"
+            formControlName="password"
+            [toggleMask]="true"
+            [feedback]="mode === 'register'"
+            autocomplete="current-password"
+          />
+          <small id="password-help">{{ i18n.text('auth.passwordHelp') }}</small>
+        </div>
+      }
+
+      @if (error()) {
+        <p-message severity="error" role="alert">{{ i18n.text('auth.error') }}</p-message>
+      }
+      @if (successMessage(); as message) {
+        <p-message severity="success" role="status">{{ message }}</p-message>
+      }
+      @if (developmentToken(); as token) {
+        <a [routerLink]="['/reset-password']" [queryParams]="{ token }"
+          >Open development reset link</a
+        >
+      }
+
+      <button pButton type="submit" [loading]="submitting()" class="submit-button">
+        {{
+          mode === 'login'
+            ? i18n.text('auth.signIn')
+            : mode === 'register'
+              ? i18n.text('auth.register')
+              : i18n.text('auth.sendReset')
+        }}
+      </button>
+
+      <div class="auth-links">
+        @if (mode === 'login') {
+          <a routerLink="/forgot-password">{{ i18n.text('auth.forgot') }}</a>
+          <a routerLink="/register">{{ i18n.text('auth.createCompany') }}</a>
+        } @else {
+          <a routerLink="/login">{{ i18n.text('auth.backToSignIn') }}</a>
+        }
+      </div>
+    </form>
+  </p-card>
+
+  <button class="language-button" type="button" (click)="i18n.toggleLanguage()">
+    {{ i18n.language() === 'English' ? 'FR' : 'EN' }}
+  </button>
+</main>

@@ -20,6 +20,11 @@ nav {
   padding: 1.5rem 0;
 }
 
+.nav-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
 .brand {
   display: inline-flex;
   gap: 0.75rem;
@@ -218,6 +223,15 @@ footer {
   footer {
     gap: 1rem;
     flex-direction: column;
+  }
+}
+
+@media (max-width: 520px) {
+  nav {
+    align-items: flex-start;
+  }
+  .nav-actions a:first-child {
+    display: none;
   }
 }
 

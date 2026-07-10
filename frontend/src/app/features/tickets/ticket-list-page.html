@@ -1,0 +1,184 @@
+<header class="page-heading">
+  <div>
+    <p class="eyebrow">{{ i18n.text('nav.tickets') }}</p>
+    <h1>{{ i18n.text('tickets.title') }}</h1>
+    <p>{{ i18n.text('tickets.summary') }}</p>
+  </div>
+  @if (store.canMaintainTickets()) {
+    <a pButton routerLink="/app/tickets/new">{{ i18n.text('tickets.new') }}</a>
+  }
+</header>
+<section class="view-bar content-panel" aria-label="Saved ticket views">
+  <div class="field">
+    <label for="savedView">{{
+      i18n.language() === 'French' ? 'Vues enregistrées' : 'Saved views'
+    }}</label
+    ><p-select
+      inputId="savedView"
+      [(ngModel)]="selectedViewId"
+      [options]="savedViews()"
+      optionLabel="name"
+      optionValue="id"
+      [showClear]="true"
+      (onChange)="applyView()"
+    />
+  </div>
+  <button
+    pButton
+    type="button"
+    severity="secondary"
+    [text]="true"
+    [disabled]="!selectedViewId"
+    (click)="deleteView()"
+  >
+    {{ i18n.language() === 'French' ? 'Supprimer la vue' : 'Delete view' }}
+  </button>
+  <div class="field save-view">
+    <label for="viewName">{{
+      i18n.language() === 'French' ? 'Nouvelle vue personnelle' : 'New personal view'
+    }}</label
+    ><input
+      pInputText
+      id="viewName"
+      [(ngModel)]="viewName"
+      [placeholder]="i18n.language() === 'French' ? 'Nom de la vue' : 'View name'"
+    />
+  </div>
+  <button
+    pButton
+    type="button"
+    severity="secondary"
+    [outlined]="true"
+    [disabled]="!viewName.trim()"
+    (click)="saveCurrentView()"
+  >
+    {{ i18n.text('common.save') }}
+  </button>
+</section>
+<form [formGroup]="filterForm" (ngSubmit)="load()" class="filter-bar" aria-label="Ticket filters">
+  <div class="field search-field">
+    <label for="ticketSearch">{{ i18n.text('common.search') }}</label
+    ><input
+      pInputText
+      id="ticketSearch"
+      formControlName="search"
+      [placeholder]="i18n.text('tickets.key') + ', ' + i18n.text('tickets.titleField')"
+    />
+  </div>
+  <div class="field">
+    <label for="projectFilter">{{ i18n.text('common.project') }}</label
+    ><p-select
+      inputId="projectFilter"
+      formControlName="projectId"
+      [options]="projects()"
+      optionValue="id"
+      [showClear]="true"
+      ><ng-template #selectedItem let-project>{{
+        project ? projectName(project) : i18n.text('common.all')
+      }}</ng-template
+      ><ng-template #item let-project>{{ projectName(project) }}</ng-template></p-select
+    >
+  </div>
+  <div class="field">
+    <label for="queueFilter">{{ i18n.text('tickets.queue') }}</label
+    ><p-select inputId="queueFilter" formControlName="queue" [options]="queues" optionValue="value"
+      ><ng-template #selectedItem let-option>{{
+        option ? i18n.text(option.labelKey) : i18n.text('common.all')
+      }}</ng-template
+      ><ng-template #item let-option>{{ i18n.text(option.labelKey) }}</ng-template></p-select
+    >
+  </div>
+  <button pButton type="submit" [loading]="loading()">{{ i18n.text('common.search') }}</button>
+</form>
+<section class="content-panel table-panel">
+  @if (store.canManageProjects() && selectedTickets.length) {
+    <div
+      class="bulk-bar"
+      role="region"
+      [attr.aria-label]="i18n.language() === 'French' ? 'Actions groupées' : 'Bulk actions'"
+    >
+      <strong
+        >{{ selectedTickets.length }}
+        {{ i18n.language() === 'French' ? 'sélectionné(s)' : 'selected' }}</strong
+      >
+      <p-select
+        [(ngModel)]="bulkPriority"
+        [options]="priorities"
+        [placeholder]="i18n.text('common.priority')"
+      >
+        <ng-template #selectedItem let-option>{{ i18n.ticketPriority(option) }}</ng-template>
+        <ng-template #item let-option>{{ i18n.ticketPriority(option) }}</ng-template>
+      </p-select>
+      <button
+        pButton
+        type="button"
+        size="small"
+        [disabled]="!bulkPriority"
+        (click)="bulkUpdate({ priority: bulkPriority! })"
+      >
+        {{ i18n.language() === 'French' ? 'Appliquer la priorité' : 'Apply priority' }}
+      </button>
+      <button
+        pButton
+        type="button"
+        size="small"
+        severity="secondary"
+        (click)="bulkUpdate({ archived: true })"
+      >
+        {{ i18n.text('common.archive') }}
+      </button>
+    </div>
+  }
+  <p-table
+    [value]="data().items"
+    [(selection)]="selectedTickets"
+    dataKey="id"
+    [loading]="loading()"
+    [tableStyle]="{ 'min-width': '68rem' }"
+    aria-label="Tickets"
+  >
+    <ng-template #header
+      ><tr>
+        @if (store.canManageProjects()) {
+          <th><p-table-header-checkbox /></th>
+        }
+        <th>{{ i18n.text('tickets.key') }}</th>
+        <th>{{ i18n.text('tickets.titleField') }}</th>
+        <th>{{ i18n.text('common.project') }}</th>
+        <th>{{ i18n.text('common.status') }}</th>
+        <th>{{ i18n.text('common.priority') }}</th>
+        <th>{{ i18n.text('tickets.assignee') }}</th>
+        <th>{{ i18n.text('common.updated') }}</th>
+      </tr></ng-template
+    >
+    <ng-template #body let-ticket
+      ><tr>
+        @if (store.canManageProjects()) {
+          <td><p-table-checkbox [value]="ticket" /></td>
+        }
+        <td>
+          <a [routerLink]="['/app/tickets', ticket.id]" class="ticket-key">{{ ticket.key }}</a>
+        </td>
+        <td>
+          <a [routerLink]="['/app/tickets', ticket.id]" class="ticket-title">{{ ticket.title }}</a>
+        </td>
+        <td>{{ ticketProjectName(ticket) }}</td>
+        <td><p-tag [value]="statusLabel(ticket)" severity="secondary" /></td>
+        <td>
+          <p-tag
+            [value]="i18n.ticketPriority(ticket.priority)"
+            [severity]="prioritySeverity(ticket.priority)"
+          />
+        </td>
+        <td>{{ ticket.assigneeDisplayName || '—' }}</td>
+        <td>{{ ticket.updatedAt | localizedDate: 'mediumDate' }}</td>
+      </tr></ng-template
+    >
+    <ng-template #emptymessage
+      ><tr>
+        <td [attr.colspan]="store.canManageProjects() ? 8 : 7">{{ i18n.text('common.empty') }}</td>
+      </tr></ng-template
+    >
+  </p-table>
+  <p class="result-count">{{ data().total }} {{ i18n.text('tickets.title').toLowerCase() }}</p>
+</section>

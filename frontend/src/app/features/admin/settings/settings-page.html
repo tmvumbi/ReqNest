@@ -1,0 +1,92 @@
+<header class="page-heading compact">
+  <div>
+    <p class="eyebrow">{{ i18n.text('nav.settings') }}</p>
+    <h1>{{ i18n.text('admin.settingsTitle') }}</h1>
+    <p>{{ i18n.text('admin.settingsSummary') }}</p>
+  </div>
+</header>
+<form [formGroup]="form" (ngSubmit)="save()" class="content-panel settings-form">
+  <div class="field-row">
+    <div class="field">
+      <label for="companyName">{{ i18n.text('auth.companyName') }}</label
+      ><input pInputText id="companyName" formControlName="name" />
+    </div>
+    <div class="field">
+      <label for="shortName">{{ i18n.text('auth.shortName') }}</label
+      ><input pInputText id="shortName" formControlName="shortName" maxlength="40" />
+    </div>
+  </div>
+  <div class="field-row">
+    <div class="field">
+      <label for="defaultLanguage">{{ i18n.text('admin.defaultLanguage') }}</label
+      ><p-select
+        inputId="defaultLanguage"
+        formControlName="defaultLanguage"
+        [options]="languages"
+      />
+    </div>
+    <div class="field">
+      <label for="defaultTheme">{{ i18n.text('admin.defaultTheme') }}</label
+      ><p-select inputId="defaultTheme" formControlName="defaultTheme" [options]="themes" />
+    </div>
+  </div>
+  <div class="field-row">
+    <div class="field">
+      <label for="timeZone">{{ i18n.text('admin.timeZone') }}</label
+      ><input pInputText id="timeZone" formControlName="timeZone" />
+    </div>
+    <div class="field">
+      <label for="primaryColor">{{ i18n.text('admin.accent') }}</label>
+      <div class="color-field">
+        <input
+          type="color"
+          id="primaryColorPicker"
+          [value]="form.controls.primaryColor.value"
+          (input)="form.controls.primaryColor.setValue($any($event.target).value)"
+          [attr.aria-label]="i18n.text('admin.accent')"
+        /><input pInputText id="primaryColor" formControlName="primaryColor" />
+      </div>
+    </div>
+  </div>
+  <fieldset>
+    <legend>{{ i18n.language() === 'French' ? 'Logos de l’entreprise' : 'Company logos' }}</legend>
+    <p>
+      {{
+        i18n.language() === 'French'
+          ? 'PNG, JPEG ou WebP, 2 Mo et 2 000 × 2 000 pixels maximum.'
+          : 'PNG, JPEG, or WebP, up to 2 MB and 2,000 × 2,000 pixels.'
+      }}
+    </p>
+    <div class="field-row">
+      <label class="logo-upload"
+        >{{ i18n.language() === 'French' ? 'Logo sur fond clair' : 'Light background logo'
+        }}<input
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          (change)="uploadLogo($event, 'light')" /></label
+      ><label class="logo-upload"
+        >{{ i18n.language() === 'French' ? 'Logo sur fond sombre' : 'Dark background logo'
+        }}<input
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          (change)="uploadLogo($event, 'dark')"
+      /></label>
+    </div>
+  </fieldset>
+  <div class="field">
+    <label for="supportContact">{{ i18n.text('admin.support') }}</label
+    ><input pInputText id="supportContact" formControlName="supportContact" />
+  </div>
+  <div class="field">
+    <label for="reportFooter">{{ i18n.text('admin.footer') }}</label
+    ><textarea pTextarea id="reportFooter" formControlName="reportFooterText" rows="3"></textarea>
+  </div>
+  @if (saved()) {
+    <p-message severity="success">{{
+      i18n.language() === 'French' ? 'Paramètres enregistrés.' : 'Settings saved.'
+    }}</p-message>
+  }
+  <button pButton type="submit" [loading]="saving() || logoUploading()">
+    {{ i18n.text('common.save') }}
+  </button>
+</form>

@@ -1,0 +1,207 @@
+<header class="page-heading">
+  <div>
+    <p class="eyebrow">{{ i18n.text('nav.users') }}</p>
+    <h1>{{ i18n.text('admin.usersTitle') }}</h1>
+    <p>{{ i18n.text('admin.usersSummary') }}</p>
+  </div>
+  <button pButton type="button" (click)="visible.set(true)">{{ i18n.text('admin.invite') }}</button>
+</header>
+<section class="content-panel">
+  <p-table [value]="members()" [tableStyle]="{ 'min-width': '64rem' }"
+    ><ng-template #header
+      ><tr>
+        <th>{{ i18n.text('auth.displayName') }}</th>
+        <th>{{ i18n.text('auth.email') }}</th>
+        <th>{{ i18n.text('admin.role') }} · {{ i18n.text('admin.scope') }}</th>
+        <th>{{ i18n.text('admin.status') }}</th>
+        <th>
+          <span class="sr-only">{{ i18n.text('common.actions') }}</span>
+        </th>
+      </tr></ng-template
+    ><ng-template #body let-member
+      ><tr>
+        <td>
+          <strong>{{ member.displayName }}</strong>
+        </td>
+        <td>{{ member.email }}</td>
+        <td>{{ grants(member) }}</td>
+        <td>
+          <p-tag
+            [value]="statusLabel(member.status)"
+            [severity]="
+              member.status === 'Active'
+                ? 'success'
+                : member.status === 'Invited'
+                  ? 'info'
+                  : 'secondary'
+            "
+          />
+        </td>
+        <td>
+          <div class="row-actions">
+            <button
+              pButton
+              type="button"
+              size="small"
+              severity="secondary"
+              [outlined]="true"
+              (click)="openManage(member)"
+            >
+              {{ i18n.text('common.edit') }}
+            </button>
+            @if (member.status === 'Invited') {
+              <button
+                pButton
+                type="button"
+                size="small"
+                severity="secondary"
+                [text]="true"
+                (click)="resend(member)"
+              >
+                {{ i18n.language() === 'French' ? 'Renvoyer' : 'Resend' }}
+              </button>
+              <button
+                pButton
+                type="button"
+                size="small"
+                severity="danger"
+                [text]="true"
+                (click)="revoke(member)"
+              >
+                {{ i18n.language() === 'French' ? 'Révoquer' : 'Revoke' }}
+              </button>
+            } @else {
+              <button
+                pButton
+                type="button"
+                size="small"
+                [severity]="member.status === 'Active' ? 'danger' : 'success'"
+                [text]="true"
+                (click)="toggleActive(member)"
+              >
+                {{
+                  member.status === 'Active'
+                    ? i18n.language() === 'French'
+                      ? 'Désactiver'
+                      : 'Deactivate'
+                    : i18n.language() === 'French'
+                      ? 'Activer'
+                      : 'Activate'
+                }}
+              </button>
+            }
+          </div>
+        </td>
+      </tr></ng-template
+    ><ng-template #emptymessage
+      ><tr>
+        <td colspan="5">{{ i18n.text('common.empty') }}</td>
+      </tr></ng-template
+    ></p-table
+  >
+</section>
+<p-dialog
+  [header]="i18n.text('admin.invite')"
+  [visible]="visible()"
+  (visibleChange)="visible.set($event)"
+  [modal]="true"
+  [style]="{ width: 'min(40rem, 94vw)' }"
+  ><form [formGroup]="form" (ngSubmit)="invite()" class="invite-form">
+    <div class="field">
+      <label for="inviteEmail">{{ i18n.text('auth.email') }}</label
+      ><input pInputText id="inviteEmail" formControlName="email" type="email" />
+    </div>
+    <div class="field">
+      <label for="inviteName">{{ i18n.text('auth.displayName') }}</label
+      ><input pInputText id="inviteName" formControlName="displayName" />
+    </div>
+    <div class="field">
+      <label for="inviteRole">{{ i18n.text('admin.role') }}</label
+      ><p-select inputId="inviteRole" formControlName="role" [options]="roles" />
+    </div>
+    <label class="toggle-row" for="allProjects"
+      ><p-toggleswitch inputId="allProjects" formControlName="allProjects" />{{
+        i18n.text('admin.allProjects')
+      }}</label
+    >
+    @if (!form.controls.allProjects.value) {
+      <div class="field">
+        <label for="inviteProjects">{{ i18n.text('admin.selectedProjects') }}</label
+        ><p-multiselect
+          inputId="inviteProjects"
+          formControlName="projectIds"
+          [options]="projects()"
+          optionValue="id"
+          display="chip"
+          ><ng-template #item let-project>{{ projectName(project) }}</ng-template></p-multiselect
+        >
+      </div>
+    }
+    @if (developmentInvitation(); as token) {
+      <div class="development-token">
+        <strong>Development invitation</strong
+        ><a [routerLink]="['/accept-invitation']" [queryParams]="{ token }"
+          >Open invitation acceptance</a
+        ><code>{{ token }}</code>
+      </div>
+    }
+    <div class="dialog-actions">
+      <button pButton type="button" severity="secondary" [text]="true" (click)="visible.set(false)">
+        {{ i18n.text('common.cancel') }}</button
+      ><button pButton type="submit" [loading]="submitting()">
+        {{ i18n.text('admin.invite') }}
+      </button>
+    </div>
+  </form></p-dialog
+>
+<p-dialog
+  [header]="
+    i18n.language() === 'French' ? 'Modifier les rôles et le périmètre' : 'Edit roles and scope'
+  "
+  [visible]="manageVisible()"
+  (visibleChange)="manageVisible.set($event)"
+  [modal]="true"
+  [style]="{ width: 'min(40rem, 94vw)' }"
+>
+  <form [formGroup]="manageForm" (ngSubmit)="saveRoles()" class="invite-form">
+    <p>{{ selectedMember()?.displayName }} · {{ selectedMember()?.email }}</p>
+    <div class="field">
+      <label for="manageRole">{{ i18n.text('admin.role') }}</label
+      ><p-select inputId="manageRole" formControlName="role" [options]="roles"
+        ><ng-template #selectedItem let-role>{{ roleLabel(role) }}</ng-template
+        ><ng-template #item let-role>{{ roleLabel(role) }}</ng-template></p-select
+      >
+    </div>
+    <label class="toggle-row" for="manageAllProjects"
+      ><p-toggleswitch inputId="manageAllProjects" formControlName="allProjects" />{{
+        i18n.text('admin.allProjects')
+      }}</label
+    >
+    @if (!manageForm.controls.allProjects.value) {
+      <div class="field">
+        <label for="manageProjects">{{ i18n.text('admin.selectedProjects') }}</label
+        ><p-multiselect
+          inputId="manageProjects"
+          formControlName="projectIds"
+          [options]="projects()"
+          optionValue="id"
+          display="chip"
+          ><ng-template #item let-project>{{ projectName(project) }}</ng-template></p-multiselect
+        >
+      </div>
+    }
+    <div class="dialog-actions">
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [text]="true"
+        (click)="manageVisible.set(false)"
+      >
+        {{ i18n.text('common.cancel') }}</button
+      ><button pButton type="submit" [loading]="submitting()">
+        {{ i18n.text('common.save') }}
+      </button>
+    </div>
+  </form>
+</p-dialog>

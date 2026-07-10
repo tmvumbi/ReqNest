@@ -1,0 +1,33 @@
+.ticket-form {
+  display: grid;
+  gap: 1.2rem;
+  max-width: 58rem;
+}
+.field {
+  display: grid;
+  gap: 0.5rem;
+}
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+label {
+  font-weight: 750;
+}
+input,
+p-select,
+p-datepicker,
+p-editor {
+  width: 100%;
+}
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+@media (max-width: 720px) {
+  .field-row {
+    grid-template-columns: 1fr;
+  }
+}
