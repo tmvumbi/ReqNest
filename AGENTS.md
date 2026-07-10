@@ -31,6 +31,7 @@ Baseline verified on 2026-07-10:
 
 - Angular and Angular CLI: `22.0.6` (stable).
 - PrimeNG: `21.1.9` (stable, requiring Angular 21); PrimeNG `22.0.0-rc.2` is pre-release.
+- Node.js: `24.18.0` LTS for the Angular toolchain.
 - .NET: `10.0.9` LTS.
 - PostgreSQL: `18.4`.
 
@@ -42,6 +43,8 @@ There is therefore no all-stable Angular 22 + PrimeNG 22 pairing at this baselin
 
 Re-check this constraint at implementation time; remove the exception once compatible stable majors are available.
 
+Current scaffold exception: the user requires Angular 22 and PrimeNG together, so the frontend temporarily uses PrimeNG `22.0.0-rc.2` and matching pre-release theme packages. Do not expand this exception to unrelated dependencies. Upgrade to stable PrimeNG 22 as soon as it is available and compatible.
+
 ## Intended repository layout
 
 Use this layout unless the repository has already established another convention:
@@ -49,14 +52,16 @@ Use this layout unless the repository has already established another convention
 ```text
 frontend/                         Angular application
 backend/
-  ReqNest.slnx                    .NET solution
+  ReqNest.sln                     .NET solution
   src/ReqNest.Api/                ASP.NET Core API
-  tests/ReqNest.Api.Tests/        unit and integration tests
-infra/                            local/deployment infrastructure as needed
+  src/ReqNest.Core/               domain and application contracts
+  src/ReqNest.Infrastructure/     EF Core and external integrations
+  tests/ReqNest.Tests/            unit and integration tests
+docker-compose.yml                local infrastructure only
 docs/                             architecture decisions and durable documentation
 ```
 
-Start with a modular monolith and one deployable API. Add backend projects only when a real boundary or testing need justifies them. Organize both frontend and backend source by product feature rather than by technical type.
+The backend is a modular monolith with one deployable API and Clean Architecture project boundaries. `Core` must not reference `Api` or `Infrastructure`; `Infrastructure` may reference `Core`; `Api` composes both. Organize code inside each project by product feature. Add more projects only when a real deployable or architectural boundary justifies them.
 
 ## Frontend conventions
 
@@ -77,6 +82,7 @@ Start with a modular monolith and one deployable API. Add backend projects only 
 - Configure PrimeNG once in `app.config.ts` with `providePrimeNG`. Start with the Aura preset unless a later design decision replaces it.
 - Express product styling through PrimeNG design tokens, semantic CSS, and small component-scoped styles. Avoid brittle selectors into PrimeNG internals, `::ng-deep`, and widespread `!important` rules.
 - Do not add Tailwind, another component library, or another icon set without an explicit decision.
+- PrimeNG 22 requires a PrimeUI license. Supply it through `PRIMEUI_LICENSE_KEY` or ignored `frontend/.env.local`; never commit the key or the generated license module.
 - Preserve keyboard behavior, focus treatment, labels, descriptions, and error associations. Target WCAG 2.2 AA and verify component-specific accessibility guidance.
 - Never guess a PrimeNG selector, input, output, template slot, or import path.
 
