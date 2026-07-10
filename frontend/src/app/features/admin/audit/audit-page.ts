@@ -28,6 +28,9 @@ import { LocalizedDatePipe } from '../../../core/i18n/localized-date.pipe';
         >
           {{ i18n.language() === 'French' ? 'Exporter JSON' : 'Export JSON' }}
         </button>
+        <button pButton type="button" severity="secondary" [outlined]="true" (click)="exportCsv()">
+          {{ i18n.language() === 'French' ? 'Exporter CSV' : 'Export CSV' }}
+        </button>
         <button pButton type="button" severity="secondary" [outlined]="true" (click)="load()">
           {{ i18n.text('common.refresh') }}
         </button>
@@ -87,6 +90,15 @@ export class AuditPage {
     const anchor = document.createElement('a');
     anchor.href = url;
     anchor.download = 'reqnest-audit.json';
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+  async exportCsv(): Promise<void> {
+    const blob = await firstValueFrom(this.api.auditCsv());
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'reqnest-audit.csv';
     anchor.click();
     URL.revokeObjectURL(url);
   }

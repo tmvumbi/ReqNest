@@ -18,14 +18,30 @@ internal static class EndpointSecurity
         authorization.HasTenantRole(AppRole.TenantAdministrator);
 
     public static bool CanManageProject(this TenantAuthorization authorization, Guid projectId) =>
-        authorization.HasProjectRole(projectId, AppRole.TenantAdministrator, AppRole.ProjectManager);
+        authorization.HasProjectRole(projectId, AppRole.TenantAdministrator, AppRole.ProjectManager) ||
+        authorization.HasPermission(projectId, AppPermission.ProjectManage);
 
     public static bool CanMaintainTickets(this TenantAuthorization authorization, Guid projectId) =>
         authorization.HasProjectRole(
             projectId,
             AppRole.TenantAdministrator,
             AppRole.ProjectManager,
-            AppRole.Contributor);
+            AppRole.Contributor) ||
+        authorization.HasPermission(projectId, AppPermission.TicketMaintain);
+
+    public static bool CanViewReports(this TenantAuthorization authorization, Guid projectId) =>
+        authorization.CanAccessProject(projectId) &&
+        (authorization.HasPermission(projectId, AppPermission.ReportView) ||
+         authorization.HasProjectRole(
+             projectId,
+             AppRole.TenantAdministrator,
+             AppRole.ProjectManager,
+             AppRole.Contributor,
+             AppRole.Observer));
+
+    public static bool CanExportReports(this TenantAuthorization authorization, Guid projectId) =>
+        authorization.HasPermission(projectId, AppPermission.ReportExport) ||
+        authorization.HasProjectRole(projectId, AppRole.TenantAdministrator, AppRole.ProjectManager);
 }
 
 internal static class ApiProblems

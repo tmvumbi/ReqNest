@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using ReqNest.Core.Configuration;
 using ReqNest.Core.Storage;
 using ReqNest.Core.Content;
 using ReqNest.Core.Notifications;
@@ -13,6 +14,7 @@ using ReqNest.Core.Tenancy;
 using ReqNest.Core.Identity;
 using ReqNest.Infrastructure.Identity;
 using ReqNest.Infrastructure.Content;
+using ReqNest.Infrastructure.Configuration;
 using ReqNest.Infrastructure.Notifications;
 using ReqNest.Infrastructure.Reports;
 using ReqNest.Infrastructure.Persistence;
@@ -43,10 +45,16 @@ public static class DependencyInjection
             serviceProvider.GetRequiredService<AuthenticationService>());
         services.AddScoped<ITenantAuthorizationService, TenantAuthorizationService>();
         services.AddSingleton<IRichContentSanitizer, RichContentSanitizer>();
+        services.AddScoped<ISlaCalculator, SlaCalculator>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.AddSingleton<IEmailDeliveryProvider, DevelopmentEmailDeliveryProvider>();
         if (configuration.GetValue<bool>("Notifications:RunDeadlineWorker"))
         {
             services.AddHostedService<TicketDeadlineWorker>();
+        }
+        if (configuration.GetValue<bool>("Notifications:RunEmailWorker"))
+        {
+            services.AddHostedService<EmailOutboxWorker>();
         }
         services.AddSingleton<IReportPdfGenerator, SimpleReportPdfGenerator>();
         services.AddDbContext<ReqNestDbContext>(options =>

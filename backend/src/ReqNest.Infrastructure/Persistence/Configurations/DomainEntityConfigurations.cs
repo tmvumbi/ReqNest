@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using ReqNest.Core.Auditing;
+using ReqNest.Core.Configuration;
 using ReqNest.Core.Identity;
 using ReqNest.Core.Notifications;
 using ReqNest.Core.Reports;
@@ -111,6 +112,49 @@ public sealed class RoleGrantProjectConfiguration : IEntityTypeConfiguration<Rol
     }
 }
 
+public sealed class CustomRoleConfiguration : IEntityTypeConfiguration<CustomRole>
+{
+    public void Configure(EntityTypeBuilder<CustomRole> builder)
+    {
+        builder.Property(entity => entity.Name).HasMaxLength(120).IsRequired();
+        builder.Property(entity => entity.Description).HasMaxLength(1000);
+        builder.Property(entity => entity.Permissions).HasColumnType("text[]");
+        builder.HasIndex(entity => new { entity.TenantId, entity.Name }).IsUnique();
+    }
+}
+
+public sealed class CustomRoleGrantConfiguration : IEntityTypeConfiguration<CustomRoleGrant>
+{
+    public void Configure(EntityTypeBuilder<CustomRoleGrant> builder)
+    {
+        builder.HasIndex(entity => new { entity.TenantMembershipId, entity.CustomRoleId }).IsUnique();
+        builder.HasOne(entity => entity.TenantMembership)
+            .WithMany()
+            .HasForeignKey(entity => entity.TenantMembershipId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne(entity => entity.CustomRole)
+            .WithMany()
+            .HasForeignKey(entity => entity.CustomRoleId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+public sealed class CustomRoleGrantProjectConfiguration : IEntityTypeConfiguration<CustomRoleGrantProject>
+{
+    public void Configure(EntityTypeBuilder<CustomRoleGrantProject> builder)
+    {
+        builder.HasKey(entity => new { entity.CustomRoleGrantId, entity.ProjectId });
+        builder.HasOne(entity => entity.CustomRoleGrant)
+            .WithMany(entity => entity.ProjectScopes)
+            .HasForeignKey(entity => entity.CustomRoleGrantId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne(entity => entity.Project)
+            .WithMany()
+            .HasForeignKey(entity => entity.ProjectId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 public sealed class ProjectConfiguration : IEntityTypeConfiguration<Project>
 {
     public void Configure(EntityTypeBuilder<Project> builder)
@@ -194,6 +238,9 @@ public sealed class TicketConfiguration : IEntityTypeConfiguration<Ticket>
         builder.Property(entity => entity.Title).HasMaxLength(300).IsRequired();
         builder.Property(entity => entity.Description).HasMaxLength(100_000).IsRequired();
         builder.Property(entity => entity.DescriptionPlainText).HasMaxLength(100_000).IsRequired();
+        builder.Property(entity => entity.TypeKey).HasMaxLength(80).IsRequired();
+        builder.Property(entity => entity.PriorityKey).HasMaxLength(80).IsRequired();
+        builder.Property(entity => entity.SlaPolicyNameSnapshot).HasMaxLength(160);
         builder.Property(entity => entity.ResolutionSummary).HasMaxLength(10_000);
         builder.Property(entity => entity.Labels).HasColumnType("text[]");
         builder.Property(entity => entity.Version).IsRowVersion();
@@ -217,6 +264,10 @@ public sealed class TicketConfiguration : IEntityTypeConfiguration<Ticket>
         builder.HasOne(entity => entity.AssigneeUser)
             .WithMany()
             .HasForeignKey(entity => entity.AssigneeUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(entity => entity.ParentTicket)
+            .WithMany()
+            .HasForeignKey(entity => entity.ParentTicketId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }
@@ -285,6 +336,88 @@ public sealed class TicketRelationshipConfiguration : IEntityTypeConfiguration<T
     }
 }
 
+public sealed class TicketTypeDefinitionConfiguration : IEntityTypeConfiguration<TicketTypeDefinition>
+{
+    public void Configure(EntityTypeBuilder<TicketTypeDefinition> builder)
+    {
+        builder.Property(entity => entity.Key).HasMaxLength(80).IsRequired();
+        builder.Property(entity => entity.LabelEnglish).HasMaxLength(120).IsRequired();
+        builder.Property(entity => entity.LabelFrench).HasMaxLength(120).IsRequired();
+        builder.HasIndex(entity => new { entity.TenantId, entity.ProjectId, entity.Key });
+    }
+}
+
+public sealed class TicketPriorityDefinitionConfiguration : IEntityTypeConfiguration<TicketPriorityDefinition>
+{
+    public void Configure(EntityTypeBuilder<TicketPriorityDefinition> builder)
+    {
+        builder.Property(entity => entity.Key).HasMaxLength(80).IsRequired();
+        builder.Property(entity => entity.LabelEnglish).HasMaxLength(120).IsRequired();
+        builder.Property(entity => entity.LabelFrench).HasMaxLength(120).IsRequired();
+        builder.Property(entity => entity.Color).HasMaxLength(20).IsRequired();
+        builder.HasIndex(entity => new { entity.TenantId, entity.ProjectId, entity.Key });
+    }
+}
+
+public sealed class CustomFieldDefinitionConfiguration : IEntityTypeConfiguration<CustomFieldDefinition>
+{
+    public void Configure(EntityTypeBuilder<CustomFieldDefinition> builder)
+    {
+        builder.Property(entity => entity.Key).HasMaxLength(80).IsRequired();
+        builder.Property(entity => entity.LabelEnglish).HasMaxLength(120).IsRequired();
+        builder.Property(entity => entity.LabelFrench).HasMaxLength(120).IsRequired();
+        builder.Property(entity => entity.OptionsJson).HasColumnType("jsonb").IsRequired();
+        builder.HasIndex(entity => new { entity.TenantId, entity.ProjectId, entity.Key });
+    }
+}
+
+public sealed class TicketCustomFieldValueConfiguration : IEntityTypeConfiguration<TicketCustomFieldValue>
+{
+    public void Configure(EntityTypeBuilder<TicketCustomFieldValue> builder)
+    {
+        builder.Property(entity => entity.ValueJson).HasColumnType("jsonb").IsRequired();
+        builder.HasIndex(entity => new { entity.TicketId, entity.DefinitionId }).IsUnique();
+    }
+}
+
+public sealed class SlaPolicyConfiguration : IEntityTypeConfiguration<SlaPolicy>
+{
+    public void Configure(EntityTypeBuilder<SlaPolicy> builder)
+    {
+        builder.Property(entity => entity.Name).HasMaxLength(160).IsRequired();
+        builder.Property(entity => entity.TimeZone).HasMaxLength(100).IsRequired();
+        builder.Property(entity => entity.PauseStatusKeys).HasColumnType("text[]");
+        builder.HasIndex(entity => new { entity.TenantId, entity.Name }).IsUnique();
+        builder.HasIndex(entity => new { entity.TenantId, entity.ProjectId, entity.IsActive });
+    }
+}
+
+public sealed class SlaPriorityTargetConfiguration : IEntityTypeConfiguration<SlaPriorityTarget>
+{
+    public void Configure(EntityTypeBuilder<SlaPriorityTarget> builder)
+    {
+        builder.Property(entity => entity.PriorityKey).HasMaxLength(80).IsRequired();
+        builder.HasIndex(entity => new { entity.SlaPolicyId, entity.PriorityKey }).IsUnique();
+        builder.HasOne(entity => entity.SlaPolicy)
+            .WithMany(entity => entity.Targets)
+            .HasForeignKey(entity => entity.SlaPolicyId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public sealed class SlaHolidayConfiguration : IEntityTypeConfiguration<SlaHoliday>
+{
+    public void Configure(EntityTypeBuilder<SlaHoliday> builder)
+    {
+        builder.Property(entity => entity.Name).HasMaxLength(160).IsRequired();
+        builder.HasIndex(entity => new { entity.SlaPolicyId, entity.Date }).IsUnique();
+        builder.HasOne(entity => entity.SlaPolicy)
+            .WithMany(entity => entity.Holidays)
+            .HasForeignKey(entity => entity.SlaPolicyId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 public sealed class AttachmentConfiguration : IEntityTypeConfiguration<Attachment>
 {
     public void Configure(EntityTypeBuilder<Attachment> builder)
@@ -322,6 +455,22 @@ public sealed class NotificationPreferenceConfiguration : IEntityTypeConfigurati
         builder.HasIndex(entity => new { entity.TenantId, entity.UserId }).IsUnique();
 }
 
+public sealed class EmailOutboxMessageConfiguration : IEntityTypeConfiguration<EmailOutboxMessage>
+{
+    public void Configure(EntityTypeBuilder<EmailOutboxMessage> builder)
+    {
+        builder.Property(entity => entity.RecipientEmail).HasMaxLength(320).IsRequired();
+        builder.Property(entity => entity.Subject).HasMaxLength(300).IsRequired();
+        builder.Property(entity => entity.BodyText).HasMaxLength(20_000).IsRequired();
+        builder.Property(entity => entity.BodyHtml).HasMaxLength(50_000).IsRequired();
+        builder.Property(entity => entity.TemplateKey).HasMaxLength(120).IsRequired();
+        builder.Property(entity => entity.DeduplicationKey).HasMaxLength(200).IsRequired();
+        builder.Property(entity => entity.LastError).HasMaxLength(1000);
+        builder.HasIndex(entity => new { entity.TenantId, entity.RecipientUserId, entity.DeduplicationKey }).IsUnique();
+        builder.HasIndex(entity => new { entity.Status, entity.NextAttemptAt });
+    }
+}
+
 public sealed class SavedViewConfiguration : IEntityTypeConfiguration<SavedView>
 {
     public void Configure(EntityTypeBuilder<SavedView> builder)
@@ -346,6 +495,18 @@ public sealed class ReportExportConfiguration : IEntityTypeConfiguration<ReportE
         builder.Property(entity => entity.BlobName).HasMaxLength(1024);
         builder.Property(entity => entity.FailureReason).HasMaxLength(500);
         builder.HasIndex(entity => new { entity.TenantId, entity.RequestedByUserId, entity.CreatedAt });
+    }
+}
+
+public sealed class ReportScheduleConfiguration : IEntityTypeConfiguration<ReportSchedule>
+{
+    public void Configure(EntityTypeBuilder<ReportSchedule> builder)
+    {
+        builder.Property(entity => entity.Name).HasMaxLength(160).IsRequired();
+        builder.Property(entity => entity.ReportType).HasMaxLength(80).IsRequired();
+        builder.Property(entity => entity.FilterSnapshotJson).HasColumnType("jsonb").IsRequired();
+        builder.HasIndex(entity => new { entity.TenantId, entity.OwnerUserId, entity.Name }).IsUnique();
+        builder.HasIndex(entity => new { entity.IsActive, entity.NextRunAt });
     }
 }
 

@@ -138,6 +138,21 @@ p-select,
 p-multiselect {
   width: 100%;
 }
+.relationship-form {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.8rem;
+}
+.relationship-form p-select,
+.relationship-form input {
+  width: 100%;
+}
+.link-button {
+  border: 0;
+  color: var(--p-red-500);
+  background: transparent;
+  cursor: pointer;
+}
 @media (max-width: 980px) {
   .detail-grid {
     grid-template-columns: 1fr;

@@ -39,15 +39,25 @@ Status legend: `done`, `in progress`, `planned`.
 
 | Capability | Required evidence | Status |
 | --- | --- | --- |
-| SLA calendars | Tenant/project policies, business hours, holidays, pause rules, ticket snapshots, warning/breach jobs and reports | planned |
-| Email and digests | Outbox delivery boundary, localized templates, retry/dedup, per-user preferences and digest scheduling | planned |
-| Configurable ticket schema | Localized types, priorities and typed custom fields with validation and reporting | planned |
-| Published views and enhanced bulk | Project views, impact preview, per-ticket outcome reporting and permission enforcement | planned |
-| Relationships and hierarchy | Symmetric relationships plus parent/child rules and authorized navigation | planned |
-| Report scheduling and CSV | Schedules, immutable filter snapshots, private artifacts, CSV export and notifications | planned |
-| Custom roles | Tenant-defined permissions layered onto the central authorization evaluator | planned |
-| Attachment previews and quotas | Safe image/PDF previews, tenant usage accounting, limits and operational cleanup | planned |
-| Retention and audit export | Configurable retention, legal-safe purge jobs and complete audit metadata export | planned |
+| SLA calendars | Tenant/project policies, business hours, holidays, pause rules, ticket snapshots, warning/breach jobs and reports | done |
+| Email and digests | Outbox delivery boundary, localized templates, retry/dedup, per-user preferences and digest scheduling | done |
+| Configurable ticket schema | Localized types, priorities and typed custom fields with validation and reporting | done |
+| Published views and enhanced bulk | Project views, impact preview, per-ticket outcome reporting and permission enforcement | done |
+| Relationships and hierarchy | Symmetric relationships plus parent/child rules and authorized navigation | done |
+| Report scheduling and CSV | Schedules, immutable filter snapshots, private artifacts, CSV export and notifications | done |
+| Custom roles | Tenant-defined permissions layered onto the central authorization evaluator | done |
+| Attachment previews and quotas | Safe image/PDF previews, tenant usage accounting, limits and operational cleanup | done |
+| Retention and audit export | Configurable retention, legal-safe purge jobs and complete audit metadata export | done |
+
+### Phase 2 completion evidence — 2026-07-10
+
+- The `OperationalMaturity` and `BackfillOperationalDefaults` migrations apply cleanly to both fresh and existing tenants. Existing tickets receive schema keys, existing tenants receive safe quota/retention defaults, and localized default schema/SLA definitions are backfilled without replacing tenant customization. EF Core reports no pending model changes.
+- The backend suite runs **12/12 passing**. `PhaseTwoOperationalMaturityTests.cs` verifies tenant/project ticket schema overrides, typed required fields, business-calendar SLA snapshots, holidays and pause metadata, quota rejection, authorized image preview headers, relationship symmetry and hierarchy-cycle denial, bulk impact preview/partial outcomes, localized CSV, durable schedule execution by the background worker, report notifications, retention settings, complete audit CSV, published project views, custom-role project scopes, and localized email-outbox creation.
+- SLA warning/breach processing excludes paused tickets, records state transitions in the audit log, and deduplicates watcher/reporter/assignee notifications. Email delivery uses a durable retrying outbox; digest generation respects each tenant time zone and user-selected local delivery hour. Scheduled reports execute automatically, preserve immutable filters, advance their recurrence, and notify owners on success or failure.
+- The PrimeNG frontend exposes a bilingual operations console for ticket types, priorities, custom fields, SLAs, custom roles, quota/retention, and email delivery status. Ticket creation consumes localized schema definitions and validates project fields; details show SLA snapshots, custom values, hierarchy/relationships, and authorized image/PDF previews. Queues support published project views and preflighted bulk changes; reports support CSV and recurring schedules; notification preferences include email, digest, and local hour.
+- A clean frontend install completed. Angular unit/component tests run **6/6 passing**; Angular ESLint, Prettier, and the production build pass. The initial production bundle is **493.18 kB**, below the configured 500 kB warning budget. Backend restore/build completes with zero warnings, `dotnet format --verify-no-changes` passes, and NuGet reports no vulnerable or deprecated packages.
+- Browser journeys created company/project/schema/ticket data, confirmed a required custom field and SLA resolution target, linked two tickets, published a project queue view, observed bulk impact confirmation before mutation, scheduled a report, enabled digest/email delivery, and verified localized select announcements. English and French plus explicit light and dark modes were checked; the final browser console contained no warnings or errors.
+- Accepted dependency residuals remain low severity: Quill 2.0.3's unused HTML-export path, an Angular-build/Babel source-map development advisory, and an esbuild development-server advisory affecting Windows. The application sanitizes rich content server-side, does not use Quill HTML export, and the recommended remaining npm remediations require breaking framework/editor changes. No moderate, high, or critical npm advisory is present.
 
 ## Phase 3 — Integrations and external service
 

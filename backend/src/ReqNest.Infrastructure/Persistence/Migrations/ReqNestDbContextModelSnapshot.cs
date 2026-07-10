@@ -83,6 +83,412 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                     b.ToTable("audit_events", (string)null);
                 });
 
+            modelBuilder.Entity("ReqNest.Core.Configuration.CustomFieldDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsRequired")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_required");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("key");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("LabelEnglish")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("label_english");
+
+                    b.Property<string>("LabelFrench")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("label_french");
+
+                    b.Property<string>("OptionsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("options_json");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer")
+                        .HasColumnName("order");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("project_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_custom_field_definitions");
+
+                    b.HasIndex("TenantId", "ProjectId", "Key")
+                        .HasDatabaseName("ix_custom_field_definitions_tenant_id_project_id_key");
+
+                    b.ToTable("custom_field_definitions", (string)null);
+                });
+
+            modelBuilder.Entity("ReqNest.Core.Configuration.SlaHoliday", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date")
+                        .HasColumnName("date");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("SlaPolicyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sla_policy_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sla_holidays");
+
+                    b.HasIndex("SlaPolicyId", "Date")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sla_holidays_sla_policy_id_date");
+
+                    b.ToTable("sla_holidays", (string)null);
+                });
+
+            modelBuilder.Entity("ReqNest.Core.Configuration.SlaPolicy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("BusinessDayEndMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("business_day_end_minutes");
+
+                    b.Property<int>("BusinessDayStartMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("business_day_start_minutes");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_default");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("name");
+
+                    b.PrimitiveCollection<string[]>("PauseStatusKeys")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("pause_status_keys");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("project_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("TimeZone")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("time_zone");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("WarningMinutesBefore")
+                        .HasColumnType("integer")
+                        .HasColumnName("warning_minutes_before");
+
+                    b.Property<int>("WorkingDaysMask")
+                        .HasColumnType("integer")
+                        .HasColumnName("working_days_mask");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sla_policies");
+
+                    b.HasIndex("TenantId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sla_policies_tenant_id_name");
+
+                    b.HasIndex("TenantId", "ProjectId", "IsActive")
+                        .HasDatabaseName("ix_sla_policies_tenant_id_project_id_is_active");
+
+                    b.ToTable("sla_policies", (string)null);
+                });
+
+            modelBuilder.Entity("ReqNest.Core.Configuration.SlaPriorityTarget", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("FirstResponseMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("first_response_minutes");
+
+                    b.Property<string>("PriorityKey")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("priority_key");
+
+                    b.Property<int>("ResolutionMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("resolution_minutes");
+
+                    b.Property<Guid>("SlaPolicyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sla_policy_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sla_priority_targets");
+
+                    b.HasIndex("SlaPolicyId", "PriorityKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sla_priority_targets_sla_policy_id_priority_key");
+
+                    b.ToTable("sla_priority_targets", (string)null);
+                });
+
+            modelBuilder.Entity("ReqNest.Core.Configuration.TicketCustomFieldValue", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("DefinitionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("definition_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("TicketId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ticket_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("ValueJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("value_json");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ticket_custom_field_values");
+
+                    b.HasIndex("TicketId", "DefinitionId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_ticket_custom_field_values_ticket_id_definition_id");
+
+                    b.ToTable("ticket_custom_field_values", (string)null);
+                });
+
+            modelBuilder.Entity("ReqNest.Core.Configuration.TicketPriorityDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Color")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("color");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("key");
+
+                    b.Property<string>("LabelEnglish")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("label_english");
+
+                    b.Property<string>("LabelFrench")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("label_french");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer")
+                        .HasColumnName("order");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("project_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("Weight")
+                        .HasColumnType("integer")
+                        .HasColumnName("weight");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ticket_priority_definitions");
+
+                    b.HasIndex("TenantId", "ProjectId", "Key")
+                        .HasDatabaseName("ix_ticket_priority_definitions_tenant_id_project_id_key");
+
+                    b.ToTable("ticket_priority_definitions", (string)null);
+                });
+
+            modelBuilder.Entity("ReqNest.Core.Configuration.TicketTypeDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("key");
+
+                    b.Property<string>("LabelEnglish")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("label_english");
+
+                    b.Property<string>("LabelFrench")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("label_french");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer")
+                        .HasColumnName("order");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("project_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ticket_type_definitions");
+
+                    b.HasIndex("TenantId", "ProjectId", "Key")
+                        .HasDatabaseName("ix_ticket_type_definitions_tenant_id_project_id_key");
+
+                    b.ToTable("ticket_type_definitions", (string)null);
+                });
+
             modelBuilder.Entity("ReqNest.Core.Identity.AccountToken", b =>
                 {
                     b.Property<Guid>("Id")
@@ -131,6 +537,126 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_account_tokens_user_id_purpose_expires_at");
 
                     b.ToTable("account_tokens", (string)null);
+                });
+
+            modelBuilder.Entity("ReqNest.Core.Identity.CustomRole", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("name");
+
+                    b.PrimitiveCollection<string[]>("Permissions")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("permissions");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_custom_roles");
+
+                    b.HasIndex("TenantId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("ix_custom_roles_tenant_id_name");
+
+                    b.ToTable("custom_roles", (string)null);
+                });
+
+            modelBuilder.Entity("ReqNest.Core.Identity.CustomRoleGrant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("AllProjects")
+                        .HasColumnType("boolean")
+                        .HasColumnName("all_projects");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CustomRoleId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("custom_role_id");
+
+                    b.Property<Guid?>("GrantedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("granted_by_user_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("TenantMembershipId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_membership_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_custom_role_grants");
+
+                    b.HasIndex("CustomRoleId")
+                        .HasDatabaseName("ix_custom_role_grants_custom_role_id");
+
+                    b.HasIndex("TenantMembershipId", "CustomRoleId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_custom_role_grants_tenant_membership_id_custom_role_id");
+
+                    b.ToTable("custom_role_grants", (string)null);
+                });
+
+            modelBuilder.Entity("ReqNest.Core.Identity.CustomRoleGrantProject", b =>
+                {
+                    b.Property<Guid>("CustomRoleGrantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("custom_role_grant_id");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("project_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("CustomRoleGrantId", "ProjectId")
+                        .HasName("pk_custom_role_grant_project");
+
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("ix_custom_role_grant_project_project_id");
+
+                    b.ToTable("custom_role_grant_project", (string)null);
                 });
 
             modelBuilder.Entity("ReqNest.Core.Identity.RoleGrant", b =>
@@ -385,6 +911,99 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                     b.ToTable("user_sessions", (string)null);
                 });
 
+            modelBuilder.Entity("ReqNest.Core.Notifications.EmailOutboxMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("attempts");
+
+                    b.Property<string>("BodyHtml")
+                        .IsRequired()
+                        .HasMaxLength(50000)
+                        .HasColumnType("character varying(50000)")
+                        .HasColumnName("body_html");
+
+                    b.Property<string>("BodyText")
+                        .IsRequired()
+                        .HasMaxLength(20000)
+                        .HasColumnType("character varying(20000)")
+                        .HasColumnName("body_text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DeduplicationKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("deduplication_key");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("last_error");
+
+                    b.Property<DateTimeOffset>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_attempt_at");
+
+                    b.Property<string>("RecipientEmail")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("recipient_email");
+
+                    b.Property<Guid>("RecipientUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("recipient_user_id");
+
+                    b.Property<DateTimeOffset?>("SentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("sent_at");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("subject");
+
+                    b.Property<string>("TemplateKey")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("template_key");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_email_outbox_messages");
+
+                    b.HasIndex("Status", "NextAttemptAt")
+                        .HasDatabaseName("ix_email_outbox_messages_status_next_attempt_at");
+
+                    b.HasIndex("TenantId", "RecipientUserId", "DeduplicationKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_email_outbox_messages_tenant_id_recipient_user_id_deduplica");
+
+                    b.ToTable("email_outbox_messages", (string)null);
+                });
+
             modelBuilder.Entity("ReqNest.Core.Notifications.Notification", b =>
                 {
                     b.Property<Guid>("Id")
@@ -489,9 +1108,21 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("digest_enabled");
 
+                    b.Property<int>("DigestHourLocal")
+                        .HasColumnType("integer")
+                        .HasColumnName("digest_hour_local");
+
                     b.Property<bool>("DueDateUpdatesEnabled")
                         .HasColumnType("boolean")
                         .HasColumnName("due_date_updates_enabled");
+
+                    b.Property<bool>("EmailEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("email_enabled");
+
+                    b.Property<DateTimeOffset?>("LastDigestAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_digest_at");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
@@ -595,6 +1226,87 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                     b.ToTable("report_exports", (string)null);
                 });
 
+            modelBuilder.Entity("ReqNest.Core.Reports.ReportSchedule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("FilterSnapshotJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("filter_snapshot_json");
+
+                    b.Property<int>("Format")
+                        .HasColumnType("integer")
+                        .HasColumnName("format");
+
+                    b.Property<int>("Frequency")
+                        .HasColumnType("integer")
+                        .HasColumnName("frequency");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<int>("Language")
+                        .HasColumnType("integer")
+                        .HasColumnName("language");
+
+                    b.Property<DateTimeOffset?>("LastRunAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_run_at");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("name");
+
+                    b.Property<DateTimeOffset>("NextRunAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_run_at");
+
+                    b.Property<Guid>("OwnerUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("owner_user_id");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("project_id");
+
+                    b.Property<string>("ReportType")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("report_type");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_report_schedules");
+
+                    b.HasIndex("IsActive", "NextRunAt")
+                        .HasDatabaseName("ix_report_schedules_is_active_next_run_at");
+
+                    b.HasIndex("TenantId", "OwnerUserId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("ix_report_schedules_tenant_id_owner_user_id_name");
+
+                    b.ToTable("report_schedules", (string)null);
+                });
+
             modelBuilder.Entity("ReqNest.Core.Tenancy.Project", b =>
                 {
                     b.Property<Guid>("Id")
@@ -653,6 +1365,10 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("resolution_target_minutes");
 
+                    b.Property<Guid?>("SlaPolicyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sla_policy_id");
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
                         .HasColumnName("tenant_id");
@@ -685,6 +1401,10 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<int>("AuditRetentionDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("audit_retention_days");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -707,6 +1427,10 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("default_theme");
 
+                    b.Property<int>("DeletedAttachmentRetentionDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("deleted_attachment_retention_days");
+
                     b.Property<string>("LogoBlobName")
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)")
@@ -723,6 +1447,10 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("name");
 
+                    b.Property<int>("NotificationRetentionDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("notification_retention_days");
+
                     b.Property<string>("PrimaryColor")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -734,11 +1462,19 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(500)")
                         .HasColumnName("report_footer_text");
 
+                    b.Property<int>("ReportRetentionDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("report_retention_days");
+
                     b.Property<string>("ShortName")
                         .IsRequired()
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)")
                         .HasColumnName("short_name");
+
+                    b.Property<long>("StorageQuotaBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("storage_quota_bytes");
 
                     b.Property<string>("SupportContact")
                         .HasMaxLength(320)
@@ -917,9 +1653,19 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("number");
 
+                    b.Property<Guid?>("ParentTicketId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("parent_ticket_id");
+
                     b.Property<int>("Priority")
                         .HasColumnType("integer")
                         .HasColumnName("priority");
+
+                    b.Property<string>("PriorityKey")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("priority_key");
 
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("uuid")
@@ -942,9 +1688,30 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("resolved_at");
 
+                    b.Property<DateTimeOffset?>("SlaPausedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("sla_paused_at");
+
+                    b.Property<int>("SlaPausedMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("sla_paused_minutes");
+
+                    b.Property<Guid?>("SlaPolicyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sla_policy_id");
+
+                    b.Property<string>("SlaPolicyNameSnapshot")
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("sla_policy_name_snapshot");
+
                     b.Property<int>("SlaState")
                         .HasColumnType("integer")
                         .HasColumnName("sla_state");
+
+                    b.Property<DateTimeOffset?>("SlaWarningAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("sla_warning_at");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
@@ -959,6 +1726,12 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                     b.Property<int>("Type")
                         .HasColumnType("integer")
                         .HasColumnName("type");
+
+                    b.Property<string>("TypeKey")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("type_key");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -979,6 +1752,9 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("AssigneeUserId")
                         .HasDatabaseName("ix_tickets_assignee_user_id");
+
+                    b.HasIndex("ParentTicketId")
+                        .HasDatabaseName("ix_tickets_parent_ticket_id");
 
                     b.HasIndex("ReporterUserId")
                         .HasDatabaseName("ix_tickets_reporter_user_id");
@@ -1263,6 +2039,10 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(40)")
                         .HasColumnName("group_by");
 
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_published");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(120)
@@ -1276,6 +2056,10 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("ProjectId")
                         .HasColumnType("uuid")
                         .HasColumnName("project_id");
+
+                    b.Property<Guid?>("PublishedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("published_by_user_id");
 
                     b.Property<string>("SortJson")
                         .IsRequired()
@@ -1493,6 +2277,30 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                     b.ToTable("workflow_transitions", (string)null);
                 });
 
+            modelBuilder.Entity("ReqNest.Core.Configuration.SlaHoliday", b =>
+                {
+                    b.HasOne("ReqNest.Core.Configuration.SlaPolicy", "SlaPolicy")
+                        .WithMany("Holidays")
+                        .HasForeignKey("SlaPolicyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_sla_holidays_sla_policies_sla_policy_id");
+
+                    b.Navigation("SlaPolicy");
+                });
+
+            modelBuilder.Entity("ReqNest.Core.Configuration.SlaPriorityTarget", b =>
+                {
+                    b.HasOne("ReqNest.Core.Configuration.SlaPolicy", "SlaPolicy")
+                        .WithMany("Targets")
+                        .HasForeignKey("SlaPolicyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_sla_priority_targets_sla_policies_sla_policy_id");
+
+                    b.Navigation("SlaPolicy");
+                });
+
             modelBuilder.Entity("ReqNest.Core.Identity.AccountToken", b =>
                 {
                     b.HasOne("ReqNest.Core.Identity.User", "User")
@@ -1503,6 +2311,48 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_account_tokens_users_user_id");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ReqNest.Core.Identity.CustomRoleGrant", b =>
+                {
+                    b.HasOne("ReqNest.Core.Identity.CustomRole", "CustomRole")
+                        .WithMany()
+                        .HasForeignKey("CustomRoleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_custom_role_grants_custom_roles_custom_role_id");
+
+                    b.HasOne("ReqNest.Core.Identity.TenantMembership", "TenantMembership")
+                        .WithMany()
+                        .HasForeignKey("TenantMembershipId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_custom_role_grants_tenant_memberships_tenant_membership_id");
+
+                    b.Navigation("CustomRole");
+
+                    b.Navigation("TenantMembership");
+                });
+
+            modelBuilder.Entity("ReqNest.Core.Identity.CustomRoleGrantProject", b =>
+                {
+                    b.HasOne("ReqNest.Core.Identity.CustomRoleGrant", "CustomRoleGrant")
+                        .WithMany("ProjectScopes")
+                        .HasForeignKey("CustomRoleGrantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_custom_role_grant_project_custom_role_grants_custom_role_gr");
+
+                    b.HasOne("ReqNest.Core.Tenancy.Project", "Project")
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_custom_role_grant_project_projects_project_id");
+
+                    b.Navigation("CustomRoleGrant");
+
+                    b.Navigation("Project");
                 });
 
             modelBuilder.Entity("ReqNest.Core.Identity.RoleGrant", b =>
@@ -1632,6 +2482,12 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_tickets_users_assignee_user_id");
 
+                    b.HasOne("ReqNest.Core.Tickets.Ticket", "ParentTicket")
+                        .WithMany()
+                        .HasForeignKey("ParentTicketId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_tickets_tickets_parent_ticket_id");
+
                     b.HasOne("ReqNest.Core.Tenancy.Project", "Project")
                         .WithMany()
                         .HasForeignKey("ProjectId")
@@ -1654,6 +2510,8 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_tickets_workflow_statuses_workflow_status_id");
 
                     b.Navigation("AssigneeUser");
+
+                    b.Navigation("ParentTicket");
 
                     b.Navigation("Project");
 
@@ -1788,6 +2646,18 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                     b.Navigation("ToStatus");
 
                     b.Navigation("Workflow");
+                });
+
+            modelBuilder.Entity("ReqNest.Core.Configuration.SlaPolicy", b =>
+                {
+                    b.Navigation("Holidays");
+
+                    b.Navigation("Targets");
+                });
+
+            modelBuilder.Entity("ReqNest.Core.Identity.CustomRoleGrant", b =>
+                {
+                    b.Navigation("ProjectScopes");
                 });
 
             modelBuilder.Entity("ReqNest.Core.Identity.RoleGrant", b =>

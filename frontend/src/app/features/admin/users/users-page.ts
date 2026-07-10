@@ -11,7 +11,7 @@ import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { ApiClient } from '../../../core/api/api-client';
-import { AppRole, Member, Project } from '../../../core/api/api-models';
+import { AppRole, CustomRole, Member, Project } from '../../../core/api/api-models';
 import { I18nService } from '../../../core/i18n/i18n.service';
 
 @Component({
@@ -38,6 +38,7 @@ export class UsersPage {
   readonly i18n = inject(I18nService);
   readonly members = signal<Member[]>([]);
   readonly projects = signal<Project[]>([]);
+  readonly customRoles = signal<CustomRole[]>([]);
   readonly visible = signal(false);
   readonly manageVisible = signal(false);
   readonly selectedMember = signal<Member | null>(null);
@@ -55,6 +56,7 @@ export class UsersPage {
     role: ['Contributor' as AppRole],
     allProjects: [true],
     projectIds: [[] as string[]],
+    customRoleIds: [[] as string[]],
   });
 
   constructor() {
@@ -121,6 +123,7 @@ export class UsersPage {
       role: grant?.role ?? 'Contributor',
       allProjects: grant?.allProjects ?? true,
       projectIds: grant?.projectIds ?? [],
+      customRoleIds: [],
     });
     this.manageVisible.set(true);
   }
@@ -140,6 +143,18 @@ export class UsersPage {
           },
         ]),
       );
+      if (this.customRoles().length) {
+        await firstValueFrom(
+          this.api.updateCustomRoleGrants(
+            member.membershipId,
+            value.customRoleIds.map((customRoleId) => ({
+              customRoleId,
+              allProjects: value.allProjects,
+              projectIds: value.allProjects ? [] : value.projectIds,
+            })),
+          ),
+        );
+      }
       this.manageVisible.set(false);
       await this.load();
     } finally {
@@ -163,11 +178,13 @@ export class UsersPage {
     return this.i18n.language() === 'French' ? project.nameFrench : project.nameEnglish;
   }
   private async load(): Promise<void> {
-    const [members, projects] = await Promise.all([
+    const [members, projects, customRoles] = await Promise.all([
       firstValueFrom(this.api.members()),
       firstValueFrom(this.api.projects()),
+      firstValueFrom(this.api.customRoles()).catch(() => []),
     ]);
     this.members.set(members);
     this.projects.set(projects);
+    this.customRoles.set(customRoles);
   }
 }

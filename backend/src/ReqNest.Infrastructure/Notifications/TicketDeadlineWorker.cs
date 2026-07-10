@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using ReqNest.Core.Auditing;
 using ReqNest.Core.Notifications;
 using ReqNest.Core.Tickets;
 using ReqNest.Infrastructure.Persistence;
@@ -40,9 +41,10 @@ public sealed class TicketDeadlineWorker(
         var dbContext = scope.ServiceProvider.GetRequiredService<ReqNestDbContext>();
         var now = DateTimeOffset.UtcNow;
         var candidates = await dbContext.Tickets.IgnoreQueryFilters()
-            .Where(entity => !entity.IsArchived && entity.ResolvedAt == null &&
+            .Where(entity => !entity.IsArchived && entity.ResolvedAt == null && entity.SlaPausedAt == null &&
                              (entity.DueAt != null && entity.DueAt <= now.AddHours(24) ||
-                              entity.ResolutionTargetAt != null && entity.ResolutionTargetAt <= now.AddHours(4)))
+                              entity.SlaWarningAt != null && entity.SlaWarningAt <= now ||
+                              entity.ResolutionTargetAt != null && entity.ResolutionTargetAt <= now))
             .OrderBy(entity => entity.DueAt ?? entity.ResolutionTargetAt)
             .Take(1_000)
             .ToArrayAsync(cancellationToken);
@@ -71,15 +73,25 @@ public sealed class TicketDeadlineWorker(
 
             if (ticket.ResolutionTargetAt is not null && ticket.ResolutionTargetAt <= now)
             {
+                var changed = ticket.SlaState != SlaState.Breached;
                 ticket.SlaState = SlaState.Breached;
                 AddNotifications(dbContext, ticket, recipients, NotificationType.SlaBreached,
                     $"sla-breached:{ticket.Id}:{ticket.ResolutionTargetAt:O}", $"{ticket.Key} breached its SLA.", $"{ticket.Key} a dépassé son SLA.");
+                if (changed)
+                {
+                    AddSlaAudit(dbContext, ticket, "ticket.sla.breached", "The ticket breached its SLA target.");
+                }
             }
-            else if (ticket.ResolutionTargetAt is not null)
+            else if (ticket.SlaWarningAt is not null && ticket.SlaWarningAt <= now)
             {
+                var changed = ticket.SlaState != SlaState.AtRisk;
                 ticket.SlaState = SlaState.AtRisk;
                 AddNotifications(dbContext, ticket, recipients, NotificationType.SlaAtRisk,
                     $"sla-risk:{ticket.Id}:{ticket.ResolutionTargetAt:O}", $"{ticket.Key} is at risk of breaching its SLA.", $"{ticket.Key} risque de dépasser son SLA.");
+                if (changed)
+                {
+                    AddSlaAudit(dbContext, ticket, "ticket.sla.at-risk", "The ticket entered its SLA warning window.");
+                }
             }
         }
 
@@ -144,5 +156,22 @@ public sealed class TicketDeadlineWorker(
                 GroupKey = ticket.Id.ToString(),
             });
         }
+    }
+
+    private static void AddSlaAudit(
+        ReqNestDbContext dbContext,
+        Ticket ticket,
+        string action,
+        string summary)
+    {
+        dbContext.AuditEvents.Add(new AuditEvent
+        {
+            TenantId = ticket.TenantId,
+            Action = action,
+            TargetType = nameof(Ticket),
+            TargetId = ticket.Id.ToString(),
+            Summary = summary,
+            CorrelationId = "sla-worker",
+        });
     }
 }

@@ -35,6 +35,8 @@ public sealed class ReqNestApiFactory : WebApplicationFactory<Program>, IAsyncLi
                 ["Storage:DefaultContainer"] = "requirements",
                 ["Database:MigrateOnStartup"] = "false",
                 ["Notifications:RunDeadlineWorker"] = "false",
+                ["Notifications:RunEmailWorker"] = "false",
+                ["Reports:RunScheduleWorker"] = "false",
                 ["Authentication:RateLimit:PermitLimit"] = "1000",
             });
         });

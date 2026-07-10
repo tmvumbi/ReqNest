@@ -52,6 +52,12 @@
         >
       }
       @if (store.isAdministrator()) {
+        <a
+          routerLink="/app/admin/operations"
+          routerLinkActive="active"
+          (click)="closeNavigation()"
+          >{{ i18n.language() === 'French' ? 'Opérations' : 'Operations' }}</a
+        >
         <a routerLink="/app/admin/settings" routerLinkActive="active" (click)="closeNavigation()">{{
           i18n.text('nav.settings')
         }}</a>

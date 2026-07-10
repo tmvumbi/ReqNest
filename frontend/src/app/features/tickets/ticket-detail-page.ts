@@ -1,6 +1,6 @@
-import { DecimalPipe } from '@angular/common';
+import { DecimalPipe, KeyValuePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
@@ -19,6 +19,7 @@ import {
   TicketComment,
   TicketDetail,
   TicketPriority,
+  TicketRelationship,
   TicketType,
   Workflow,
   WorkflowStatus,
@@ -31,7 +32,9 @@ import { SessionStore } from '../../core/session/session-store';
   selector: 'app-ticket-detail-page',
   imports: [
     DecimalPipe,
+    KeyValuePipe,
     LocalizedDatePipe,
+    FormsModule,
     ReactiveFormsModule,
     RouterLink,
     ButtonModule,
@@ -58,6 +61,7 @@ export class TicketDetailPage {
   readonly comments = signal<TicketComment[]>([]);
   readonly activity = signal<TicketActivity[]>([]);
   readonly attachments = signal<TicketAttachment[]>([]);
+  readonly relationships = signal<TicketRelationship[]>([]);
   readonly members = signal<Member[]>([]);
   readonly editVisible = signal(false);
   readonly saving = signal(false);
@@ -65,6 +69,9 @@ export class TicketDetailPage {
   readonly submittingComment = signal(false);
   readonly uploading = signal(false);
   readonly error = signal(false);
+  relationshipTargetId = '';
+  relationshipType: TicketRelationship['type'] = 'RelatesTo';
+  readonly relationshipTypes: TicketRelationship['type'][] = ['RelatesTo', 'Duplicates', 'Blocks'];
   readonly commentForm = this.formBuilder.nonNullable.group({
     body: ['', Validators.required],
     mentionUserIds: [[] as string[]],
@@ -163,7 +170,7 @@ export class TicketDetailPage {
       Pending: 'En attente',
       Clean: 'Sain',
       Quarantined: 'En quarantaine',
-      Rejected: 'Rejeté',
+      Failed: 'Échec',
     }[status];
   }
 
@@ -218,6 +225,9 @@ export class TicketDetailPage {
               .filter(Boolean),
             dueAt: value.dueAt ? new Date(value.dueAt).toISOString() : null,
             resolutionSummary: value.resolutionSummary || null,
+            typeKey: ticket.typeKey,
+            priorityKey: ticket.priorityKey,
+            customFields: ticket.customFields,
           }),
         ),
       );
@@ -252,6 +262,34 @@ export class TicketDetailPage {
     await Promise.all([this.refreshAttachments(), this.refreshActivity()]);
   }
 
+  canPreview(attachment: TicketAttachment): boolean {
+    return (
+      attachment.scanStatus === 'Clean' &&
+      (attachment.contentType.startsWith('image/') || attachment.contentType === 'application/pdf')
+    );
+  }
+
+  async previewAttachment(attachment: TicketAttachment): Promise<void> {
+    const blob = await firstValueFrom(this.api.previewAttachment(attachment.id));
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank', 'noopener,noreferrer');
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }
+
+  async addRelationship(): Promise<void> {
+    if (!this.relationshipTargetId) return;
+    await firstValueFrom(
+      this.api.createRelationship(this.ticketId, this.relationshipTargetId, this.relationshipType),
+    );
+    this.relationshipTargetId = '';
+    this.relationships.set(await firstValueFrom(this.api.relationships(this.ticketId)));
+  }
+
+  async clearParent(): Promise<void> {
+    await firstValueFrom(this.api.setParent(this.ticketId, null));
+    await this.refreshTicket();
+  }
+
   isWatching(item: TicketDetail): boolean {
     return item.watchers.some((watcher) => watcher.userId === this.store.session()?.userId);
   }
@@ -283,14 +321,16 @@ export class TicketDetailPage {
 
   private async load(): Promise<void> {
     try {
-      const [ticket, workflows, comments, activity, attachments, members] = await Promise.all([
-        firstValueFrom(this.api.ticket(this.ticketId)),
-        firstValueFrom(this.api.workflows()),
-        firstValueFrom(this.api.comments(this.ticketId)),
-        firstValueFrom(this.api.activity(this.ticketId)),
-        firstValueFrom(this.api.attachments(this.ticketId)),
-        firstValueFrom(this.api.members()).catch(() => []),
-      ]);
+      const [ticket, workflows, comments, activity, attachments, members, relationships] =
+        await Promise.all([
+          firstValueFrom(this.api.ticket(this.ticketId)),
+          firstValueFrom(this.api.workflows()),
+          firstValueFrom(this.api.comments(this.ticketId)),
+          firstValueFrom(this.api.activity(this.ticketId)),
+          firstValueFrom(this.api.attachments(this.ticketId)),
+          firstValueFrom(this.api.members()).catch(() => []),
+          firstValueFrom(this.api.relationships(this.ticketId)),
+        ]);
       this.ticket.set(ticket);
       this.workflow.set(
         workflows.find((item) => item.statuses.some((status) => status.id === ticket.statusId)) ??
@@ -300,6 +340,7 @@ export class TicketDetailPage {
       this.activity.set(activity);
       this.attachments.set(attachments);
       this.members.set(members);
+      this.relationships.set(relationships);
     } catch {
       this.error.set(true);
     } finally {

@@ -19,4 +19,8 @@ public sealed class SavedView : Entity
     public string ColumnsJson { get; set; } = "[]";
 
     public string? GroupBy { get; set; }
+
+    public bool IsPublished { get; set; }
+
+    public Guid? PublishedByUserId { get; set; }
 }

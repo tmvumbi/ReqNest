@@ -65,4 +65,46 @@ public sealed class NotificationPreference : Entity
     public bool DueDateUpdatesEnabled { get; set; } = true;
 
     public bool DigestEnabled { get; set; }
+
+    public bool EmailEnabled { get; set; }
+
+    public int DigestHourLocal { get; set; } = 8;
+
+    public DateTimeOffset? LastDigestAt { get; set; }
+}
+
+public enum EmailOutboxStatus
+{
+    Pending,
+    Sent,
+    Failed,
+}
+
+public sealed class EmailOutboxMessage : Entity
+{
+    public Guid TenantId { get; set; }
+
+    public Guid RecipientUserId { get; set; }
+
+    public string RecipientEmail { get; set; } = string.Empty;
+
+    public string Subject { get; set; } = string.Empty;
+
+    public string BodyText { get; set; } = string.Empty;
+
+    public string BodyHtml { get; set; } = string.Empty;
+
+    public string TemplateKey { get; set; } = string.Empty;
+
+    public string DeduplicationKey { get; set; } = string.Empty;
+
+    public EmailOutboxStatus Status { get; set; }
+
+    public int Attempts { get; set; }
+
+    public DateTimeOffset NextAttemptAt { get; set; } = DateTimeOffset.UtcNow;
+
+    public DateTimeOffset? SentAt { get; set; }
+
+    public string? LastError { get; set; }
 }

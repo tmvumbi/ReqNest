@@ -3,6 +3,7 @@ using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ReqNest.Core.Auditing;
+using ReqNest.Core.Configuration;
 using ReqNest.Core.Identity;
 using ReqNest.Core.Tenancy;
 using ReqNest.Core.Workflows;
@@ -89,6 +90,9 @@ public sealed class AuthenticationService(
 
         dbContext.Users.Add(user);
         dbContext.Tenants.Add(tenant);
+        dbContext.TicketTypeDefinitions.AddRange(CreateDefaultTypes(tenant.Id));
+        dbContext.TicketPriorityDefinitions.AddRange(CreateDefaultPriorities(tenant.Id));
+        dbContext.SlaPolicies.Add(CreateDefaultSlaPolicy(tenant.Id, tenant.TimeZone));
         dbContext.AuditEvents.Add(new AuditEvent
         {
             TenantId = tenant.Id,
@@ -116,7 +120,10 @@ public sealed class AuthenticationService(
                 tenant.Id,
                 tenant.Name,
                 tenant.ShortName,
-                [AppRole.TenantAdministrator])]));
+                [AppRole.TenantAdministrator],
+                [],
+                [],
+                new Dictionary<Guid, IReadOnlyCollection<string>>())]));
     }
 
     public async Task<AuthenticationResult> LoginAsync(
@@ -183,12 +190,42 @@ public sealed class AuthenticationService(
         dbContext.UserSessions.Add(session.Entity);
         await dbContext.SaveChangesAsync(cancellationToken);
 
+        var membershipIds = memberships.Select(membership => membership.Id).ToArray();
+        var customGrants = await dbContext.CustomRoleGrants
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(grant => membershipIds.Contains(grant.TenantMembershipId) && grant.CustomRole.IsActive)
+            .Include(grant => grant.CustomRole)
+            .Include(grant => grant.ProjectScopes)
+            .ToArrayAsync(cancellationToken);
+
         var tenants = memberships
             .Select(membership => new TenantAccessSummary(
                 membership.TenantId,
                 membership.Tenant.Name,
                 membership.Tenant.ShortName,
-                membership.RoleGrants.Select(grant => grant.Role).Distinct().ToArray()))
+                membership.RoleGrants.Select(grant => grant.Role).Distinct().ToArray(),
+                customGrants.Where(grant => grant.TenantMembershipId == membership.Id && grant.AllProjects)
+                    .SelectMany(grant => grant.CustomRole.Permissions)
+                    .Distinct(StringComparer.Ordinal)
+                    .ToArray(),
+                customGrants.Where(grant => grant.TenantMembershipId == membership.Id)
+                    .Select(grant => grant.CustomRole.Name)
+                    .Distinct(StringComparer.Ordinal)
+                    .ToArray(),
+                customGrants.Where(grant => grant.TenantMembershipId == membership.Id && !grant.AllProjects)
+                    .SelectMany(grant => grant.ProjectScopes.Select(scope => new
+                    {
+                        scope.ProjectId,
+                        grant.CustomRole.Permissions,
+                    }))
+                    .GroupBy(item => item.ProjectId)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => (IReadOnlyCollection<string>)group
+                            .SelectMany(item => item.Permissions)
+                            .Distinct(StringComparer.Ordinal)
+                            .ToArray())))
             .ToArray();
 
         return AuthenticationResult.Success(new AuthenticatedSession(
@@ -496,6 +533,42 @@ public sealed class AuthenticationService(
         ];
 
         return workflow;
+    }
+
+    private static IReadOnlyCollection<TicketTypeDefinition> CreateDefaultTypes(Guid tenantId) =>
+    [
+        new() { TenantId = tenantId, Key = "Incident", LabelEnglish = "Incident", LabelFrench = "Incident", Order = 1 },
+        new() { TenantId = tenantId, Key = "ServiceRequest", LabelEnglish = "Service request", LabelFrench = "Demande de service", Order = 2 },
+        new() { TenantId = tenantId, Key = "Task", LabelEnglish = "Task", LabelFrench = "Tâche", Order = 3 },
+        new() { TenantId = tenantId, Key = "Problem", LabelEnglish = "Problem", LabelFrench = "Problème", Order = 4 },
+    ];
+
+    private static IReadOnlyCollection<TicketPriorityDefinition> CreateDefaultPriorities(Guid tenantId) =>
+    [
+        new() { TenantId = tenantId, Key = "Low", LabelEnglish = "Low", LabelFrench = "Faible", Color = "#64748b", Weight = 1, Order = 1 },
+        new() { TenantId = tenantId, Key = "Normal", LabelEnglish = "Normal", LabelFrench = "Normale", Color = "#2563eb", Weight = 2, Order = 2 },
+        new() { TenantId = tenantId, Key = "High", LabelEnglish = "High", LabelFrench = "Élevée", Color = "#d97706", Weight = 3, Order = 3 },
+        new() { TenantId = tenantId, Key = "Urgent", LabelEnglish = "Urgent", LabelFrench = "Urgente", Color = "#dc2626", Weight = 4, Order = 4 },
+    ];
+
+    private static SlaPolicy CreateDefaultSlaPolicy(Guid tenantId, string timeZone)
+    {
+        var policy = new SlaPolicy
+        {
+            TenantId = tenantId,
+            Name = "Standard business hours",
+            TimeZone = timeZone,
+            IsDefault = true,
+            WarningMinutesBefore = 60,
+        };
+        policy.Targets =
+        [
+            new() { TenantId = tenantId, SlaPolicy = policy, SlaPolicyId = policy.Id, PriorityKey = "Low", FirstResponseMinutes = 480, ResolutionMinutes = 2400 },
+            new() { TenantId = tenantId, SlaPolicy = policy, SlaPolicyId = policy.Id, PriorityKey = "Normal", FirstResponseMinutes = 240, ResolutionMinutes = 1440 },
+            new() { TenantId = tenantId, SlaPolicy = policy, SlaPolicyId = policy.Id, PriorityKey = "High", FirstResponseMinutes = 120, ResolutionMinutes = 480 },
+            new() { TenantId = tenantId, SlaPolicy = policy, SlaPolicyId = policy.Id, PriorityKey = "Urgent", FirstResponseMinutes = 30, ResolutionMinutes = 240 },
+        ];
+        return policy;
     }
 
     private static WorkflowTransition CreateTransition(

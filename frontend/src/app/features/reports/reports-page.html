@@ -14,6 +14,7 @@
       [(ngModel)]="selectedReport"
       [options]="reportOptions"
       optionValue="value"
+      optionLabel="value"
     >
       <ng-template #selectedItem let-option>{{
         option ? i18n.text(option.labelKey) : ''
@@ -28,6 +29,7 @@
       [(ngModel)]="selectedProject"
       [options]="projects()"
       optionValue="id"
+      [optionLabel]="i18n.language() === 'French' ? 'nameFrench' : 'nameEnglish'"
       [showClear]="true"
     >
       <ng-template #selectedItem let-project>{{
@@ -50,8 +52,43 @@
     >
       {{ i18n.text('reports.export') }}
     </button>
+    <button pButton type="button" severity="secondary" [outlined]="true" (click)="exportCsv()">
+      {{ i18n.language() === 'French' ? 'Exporter CSV' : 'Export CSV' }}
+    </button>
   }
 </section>
+
+@if (store.canManageProjects()) {
+  <section class="content-panel report-controls">
+    <div class="field">
+      <label for="scheduleName">{{
+        i18n.language() === 'French' ? 'Nom de la planification' : 'Schedule name'
+      }}</label>
+      <input id="scheduleName" pInputText [(ngModel)]="scheduleName" />
+    </div>
+    <div class="field">
+      <label for="scheduleFrequency">{{
+        i18n.language() === 'French' ? 'Fréquence' : 'Frequency'
+      }}</label
+      ><p-select
+        inputId="scheduleFrequency"
+        [(ngModel)]="scheduleFrequency"
+        [options]="scheduleFrequencies"
+      />
+    </div>
+    <div class="field">
+      <label for="scheduleFormat">Format</label
+      ><p-select
+        inputId="scheduleFormat"
+        [(ngModel)]="scheduleFormat"
+        [options]="scheduleFormats"
+      />
+    </div>
+    <button pButton type="button" (click)="createSchedule()" [disabled]="!scheduleName">
+      {{ i18n.language() === 'French' ? 'Planifier' : 'Schedule' }}
+    </button>
+  </section>
+}
 
 @if (exportReady()) {
   <p-message severity="success">{{
@@ -137,6 +174,46 @@
               (click)="download(item)"
             >
               {{ i18n.language() === 'French' ? 'Télécharger' : 'Download' }}
+            </button>
+          </td>
+        </tr></ng-template
+      >
+    </p-table>
+  </section>
+}
+
+@if (schedules().length) {
+  <section class="content-panel">
+    <div class="section-heading">
+      <h2>{{ i18n.language() === 'French' ? 'Rapports planifiés' : 'Scheduled reports' }}</h2>
+    </div>
+    <p-table [value]="schedules()">
+      <ng-template #header
+        ><tr>
+          <th>{{ i18n.language() === 'French' ? 'Nom' : 'Name' }}</th>
+          <th>{{ i18n.language() === 'French' ? 'Fréquence' : 'Frequency' }}</th>
+          <th>Format</th>
+          <th>{{ i18n.language() === 'French' ? 'Prochaine exécution' : 'Next run' }}</th>
+          <th>
+            <span class="sr-only">{{ i18n.text('common.actions') }}</span>
+          </th>
+        </tr></ng-template
+      >
+      <ng-template #body let-item
+        ><tr>
+          <td>{{ item.name }}</td>
+          <td>{{ item.frequency }}</td>
+          <td>{{ item.format }}</td>
+          <td>{{ item.nextRunAt | localizedDate: 'medium' }}</td>
+          <td>
+            <button
+              pButton
+              type="button"
+              size="small"
+              severity="secondary"
+              (click)="runSchedule(item)"
+            >
+              {{ i18n.language() === 'French' ? 'Exécuter' : 'Run now' }}
             </button>
           </td>
         </tr></ng-template

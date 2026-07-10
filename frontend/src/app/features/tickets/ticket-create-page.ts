@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
@@ -8,13 +9,21 @@ import { EditorModule } from 'primeng/editor';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { ApiClient } from '../../core/api/api-client';
-import { Project, TicketPriority, TicketType } from '../../core/api/api-models';
+import {
+  CustomFieldDefinition,
+  Project,
+  TicketPriority,
+  TicketSchema,
+  TicketType,
+  TicketTypeDefinition,
+} from '../../core/api/api-models';
 import { I18nService } from '../../core/i18n/i18n.service';
 
 @Component({
   selector: 'app-ticket-create-page',
   imports: [
     ReactiveFormsModule,
+    FormsModule,
     RouterLink,
     ButtonModule,
     DatePickerModule,
@@ -32,9 +41,9 @@ export class TicketCreatePage {
   private readonly formBuilder = inject(FormBuilder);
   readonly i18n = inject(I18nService);
   readonly projects = signal<Project[]>([]);
+  readonly schema = signal<TicketSchema | null>(null);
   readonly submitting = signal(false);
-  readonly priorities: TicketPriority[] = ['Low', 'Normal', 'High', 'Urgent'];
-  readonly types: TicketType[] = ['Incident', 'ServiceRequest', 'Task', 'Problem'];
+  readonly customFields: Record<string, unknown> = {};
   readonly editorFormats = [
     'header',
     'bold',
@@ -52,16 +61,33 @@ export class TicketCreatePage {
       Validators.maxLength(300),
     ]),
     description: this.formBuilder.nonNullable.control('', Validators.required),
-    type: this.formBuilder.nonNullable.control<TicketType>('Incident'),
-    priority: this.formBuilder.nonNullable.control<TicketPriority>('Normal'),
+    typeKey: this.formBuilder.nonNullable.control('', Validators.required),
+    priorityKey: this.formBuilder.nonNullable.control('', Validators.required),
     labels: this.formBuilder.nonNullable.control(''),
     dueAt: this.formBuilder.control<Date | null>(null),
   });
 
   constructor() {
-    void firstValueFrom(this.api.projects()).then((projects) =>
-      this.projects.set(projects.filter((project) => !project.isArchived)),
+    void firstValueFrom(this.api.projects()).then((projects) => {
+      const active = projects.filter((project) => !project.isArchived);
+      this.projects.set(active);
+      if (active.length === 1) {
+        this.form.controls.projectId.setValue(active[0].id);
+        void this.loadSchema(active[0].id);
+      }
+    });
+  }
+
+  async loadSchema(projectId: string): Promise<void> {
+    const schema = await firstValueFrom(this.api.ticketSchema(projectId));
+    this.schema.set(schema);
+    const types = this.activeDefinitions(schema.types, projectId);
+    const priorities = this.activeDefinitions(schema.priorities, projectId);
+    this.form.controls.typeKey.setValue(types[0]?.key ?? '');
+    this.form.controls.priorityKey.setValue(
+      priorities.find((item) => item.key === 'Normal')?.key ?? priorities[0]?.key ?? '',
     );
+    for (const field of schema.customFields) this.customFields[field.key] = null;
   }
 
   async create(): Promise<void> {
@@ -75,8 +101,11 @@ export class TicketCreatePage {
           projectId: value.projectId,
           title: value.title,
           description: value.description,
-          type: value.type,
-          priority: value.priority,
+          type: this.legacyType(value.typeKey),
+          priority: this.legacyPriority(value.priorityKey),
+          typeKey: value.typeKey,
+          priorityKey: value.priorityKey,
+          customFields: this.customFields,
           assigneeUserId: null,
           labels: value.labels
             .split(',')
@@ -93,5 +122,39 @@ export class TicketCreatePage {
 
   projectName(project: Project): string {
     return this.i18n.language() === 'French' ? project.nameFrench : project.nameEnglish;
+  }
+
+  definitionLabel(definition: TicketTypeDefinition): string {
+    return this.i18n.language() === 'French' ? definition.labelFrench : definition.labelEnglish;
+  }
+
+  activeDefinitions<T extends TicketTypeDefinition>(items: T[], projectId: string): T[] {
+    const byKey = new Map<string, T>();
+    for (const item of items.filter((item) => item.isActive)) {
+      if (!byKey.has(item.key) || item.projectId === projectId) byKey.set(item.key, item);
+    }
+    return [...byKey.values()].sort((a, b) => a.order - b.order);
+  }
+
+  fields(projectId: string): CustomFieldDefinition[] {
+    return this.activeDefinitions(this.schema()?.customFields ?? [], projectId);
+  }
+
+  choices(field: CustomFieldDefinition): string[] {
+    try {
+      return JSON.parse(field.optionsJson) as string[];
+    } catch {
+      return [];
+    }
+  }
+
+  private legacyType(key: string): TicketType {
+    return ['Incident', 'ServiceRequest', 'Task', 'Problem'].includes(key)
+      ? (key as TicketType)
+      : 'Incident';
+  }
+
+  private legacyPriority(key: string): TicketPriority {
+    return ['Low', 'Normal', 'High', 'Urgent'].includes(key) ? (key as TicketPriority) : 'Normal';
   }
 }

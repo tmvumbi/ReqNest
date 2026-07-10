@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using ReqNest.Core.Auditing;
 using ReqNest.Core.Common;
+using ReqNest.Core.Configuration;
 using ReqNest.Core.Identity;
 using ReqNest.Core.Notifications;
 using ReqNest.Core.Reports;
@@ -28,6 +29,10 @@ public sealed class ReqNestDbContext(
 
     public DbSet<RoleGrant> RoleGrants => Set<RoleGrant>();
 
+    public DbSet<CustomRole> CustomRoles => Set<CustomRole>();
+
+    public DbSet<CustomRoleGrant> CustomRoleGrants => Set<CustomRoleGrant>();
+
     public DbSet<Project> Projects => Set<Project>();
 
     public DbSet<Workflow> Workflows => Set<Workflow>();
@@ -48,15 +53,33 @@ public sealed class ReqNestDbContext(
 
     public DbSet<TicketRelationship> TicketRelationships => Set<TicketRelationship>();
 
+    public DbSet<TicketTypeDefinition> TicketTypeDefinitions => Set<TicketTypeDefinition>();
+
+    public DbSet<TicketPriorityDefinition> TicketPriorityDefinitions => Set<TicketPriorityDefinition>();
+
+    public DbSet<CustomFieldDefinition> CustomFieldDefinitions => Set<CustomFieldDefinition>();
+
+    public DbSet<TicketCustomFieldValue> TicketCustomFieldValues => Set<TicketCustomFieldValue>();
+
+    public DbSet<SlaPolicy> SlaPolicies => Set<SlaPolicy>();
+
+    public DbSet<SlaPriorityTarget> SlaPriorityTargets => Set<SlaPriorityTarget>();
+
+    public DbSet<SlaHoliday> SlaHolidays => Set<SlaHoliday>();
+
     public DbSet<Attachment> Attachments => Set<Attachment>();
 
     public DbSet<Notification> Notifications => Set<Notification>();
 
     public DbSet<NotificationPreference> NotificationPreferences => Set<NotificationPreference>();
 
+    public DbSet<EmailOutboxMessage> EmailOutboxMessages => Set<EmailOutboxMessage>();
+
     public DbSet<SavedView> SavedViews => Set<SavedView>();
 
     public DbSet<ReportExport> ReportExports => Set<ReportExport>();
+
+    public DbSet<ReportSchedule> ReportSchedules => Set<ReportSchedule>();
 
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
 
@@ -71,6 +94,12 @@ public sealed class ReqNestDbContext(
         modelBuilder.Entity<RoleGrant>().HasQueryFilter(entity =>
             tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
         modelBuilder.Entity<RoleGrantProject>().HasQueryFilter(entity =>
+            tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
+        modelBuilder.Entity<CustomRole>().HasQueryFilter(entity =>
+            tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
+        modelBuilder.Entity<CustomRoleGrant>().HasQueryFilter(entity =>
+            tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
+        modelBuilder.Entity<CustomRoleGrantProject>().HasQueryFilter(entity =>
             tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
         modelBuilder.Entity<Project>().HasQueryFilter(entity =>
             tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
@@ -92,15 +121,33 @@ public sealed class ReqNestDbContext(
             tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
         modelBuilder.Entity<TicketRelationship>().HasQueryFilter(entity =>
             tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
+        modelBuilder.Entity<TicketTypeDefinition>().HasQueryFilter(entity =>
+            tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
+        modelBuilder.Entity<TicketPriorityDefinition>().HasQueryFilter(entity =>
+            tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
+        modelBuilder.Entity<CustomFieldDefinition>().HasQueryFilter(entity =>
+            tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
+        modelBuilder.Entity<TicketCustomFieldValue>().HasQueryFilter(entity =>
+            tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
+        modelBuilder.Entity<SlaPolicy>().HasQueryFilter(entity =>
+            tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
+        modelBuilder.Entity<SlaPriorityTarget>().HasQueryFilter(entity =>
+            tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
+        modelBuilder.Entity<SlaHoliday>().HasQueryFilter(entity =>
+            tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
         modelBuilder.Entity<Attachment>().HasQueryFilter(entity =>
             tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
         modelBuilder.Entity<Notification>().HasQueryFilter(entity =>
             tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
         modelBuilder.Entity<NotificationPreference>().HasQueryFilter(entity =>
             tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
+        modelBuilder.Entity<EmailOutboxMessage>().HasQueryFilter(entity =>
+            tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
         modelBuilder.Entity<SavedView>().HasQueryFilter(entity =>
             tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
         modelBuilder.Entity<ReportExport>().HasQueryFilter(entity =>
+            tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
+        modelBuilder.Entity<ReportSchedule>().HasQueryFilter(entity =>
             tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
         modelBuilder.Entity<AuditEvent>().HasQueryFilter(entity =>
             tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);

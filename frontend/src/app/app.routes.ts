@@ -104,6 +104,14 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'admin/operations',
+        canActivate: [tenantAdministratorGuard],
+        loadComponent: () =>
+          import('./features/admin/operations/operations-page').then(
+            (module) => module.OperationsPage,
+          ),
+      },
+      {
         path: 'admin/settings',
         canActivate: [tenantAdministratorGuard],
         loadComponent: () =>

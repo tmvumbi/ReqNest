@@ -29,12 +29,31 @@ export class SessionStore {
     );
   });
   readonly roles = computed(() => this.activeTenant()?.roles ?? []);
+  readonly permissions = computed(() => this.activeTenant()?.permissions ?? []);
+  readonly projectPermissions = computed(() => this.activeTenant()?.projectPermissions ?? {});
   readonly isAdministrator = computed(() => this.roles().includes('TenantAdministrator'));
   readonly canManageProjects = computed(
-    () => this.isAdministrator() || this.roles().includes('ProjectManager'),
+    () =>
+      this.isAdministrator() ||
+      this.roles().includes('ProjectManager') ||
+      this.permissions().includes('project.manage'),
   );
   readonly canMaintainTickets = computed(
-    () => this.canManageProjects() || this.roles().includes('Contributor'),
+    () =>
+      this.canManageProjects() ||
+      this.roles().includes('Contributor') ||
+      this.permissions().includes('ticket.maintain') ||
+      Object.values(this.projectPermissions()).some((permissions) =>
+        permissions.includes('ticket.maintain'),
+      ),
+  );
+  readonly canBulkTickets = computed(
+    () =>
+      this.canManageProjects() ||
+      this.permissions().includes('ticket.bulk') ||
+      Object.values(this.projectPermissions()).some((permissions) =>
+        permissions.includes('ticket.bulk'),
+      ),
   );
 
   constructor() {
@@ -56,6 +75,31 @@ export class SessionStore {
       sessionStorage.setItem(sessionKey, JSON.stringify(session));
       if (tenantId) sessionStorage.setItem(tenantKey, tenantId);
     }
+  }
+
+  canMaintainProject(projectId: string): boolean {
+    return (
+      this.canManageProjects() ||
+      this.roles().includes('Contributor') ||
+      this.permissions().includes('ticket.maintain') ||
+      (this.projectPermissions()[projectId] ?? []).includes('ticket.maintain')
+    );
+  }
+
+  canManageProject(projectId: string): boolean {
+    return (
+      this.canManageProjects() ||
+      this.permissions().includes('project.manage') ||
+      (this.projectPermissions()[projectId] ?? []).includes('project.manage')
+    );
+  }
+
+  canArchiveProject(projectId: string): boolean {
+    return (
+      this.canManageProjects() ||
+      this.permissions().includes('ticket.archive') ||
+      (this.projectPermissions()[projectId] ?? []).includes('ticket.archive')
+    );
   }
 
   switchTenant(tenantId: string): void {

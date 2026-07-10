@@ -9,6 +9,9 @@ export interface TenantAccess {
   tenantName: string;
   tenantShortName: string;
   roles: AppRole[];
+  permissions: string[];
+  customRoles: string[];
+  projectPermissions: Record<string, string[]>;
 }
 
 export interface AuthenticatedSession {
@@ -109,6 +112,8 @@ export interface TicketListItem {
   isArchived: boolean;
   updatedAt: string;
   version: number;
+  typeKey: string;
+  priorityKey: string;
 }
 
 export interface PagedTickets {
@@ -157,6 +162,14 @@ export interface TicketDetail {
   createdAt: string;
   updatedAt: string;
   version: number;
+  typeKey: string;
+  priorityKey: string;
+  slaPolicyName: string | null;
+  slaWarningAt: string | null;
+  slaPausedAt: string | null;
+  slaPausedMinutes: number;
+  parentTicketId: string | null;
+  customFields: Record<string, unknown>;
 }
 
 export interface TicketComment {
@@ -187,7 +200,7 @@ export interface TicketAttachment {
   contentType: string;
   size: number;
   checksumSha256: string;
-  scanStatus: 'Pending' | 'Clean' | 'Quarantined' | 'Rejected';
+  scanStatus: 'Pending' | 'Clean' | 'Quarantined' | 'Failed';
   uploadedByUserId: string;
   createdAt: string;
 }
@@ -233,6 +246,8 @@ export interface NotificationPreferences {
   watcherUpdatesEnabled: boolean;
   dueDateUpdatesEnabled: boolean;
   digestEnabled: boolean;
+  emailEnabled: boolean;
+  digestHourLocal: number;
 }
 
 export interface SavedView {
@@ -243,6 +258,8 @@ export interface SavedView {
   sortJson: string;
   columnsJson: string;
   groupBy: string | null;
+  isPublished: boolean;
+  ownerUserId: string;
 }
 
 export interface TenantSettings {
@@ -311,4 +328,109 @@ export interface AuditPage {
   page: number;
   pageSize: number;
   total: number;
+}
+
+export type CustomFieldKind = 'Text' | 'Number' | 'Date' | 'Boolean' | 'Choice';
+
+export interface TicketTypeDefinition {
+  id: string;
+  projectId: string | null;
+  key: string;
+  labelEnglish: string;
+  labelFrench: string;
+  order: number;
+  isActive: boolean;
+}
+
+export interface TicketPriorityDefinition extends TicketTypeDefinition {
+  color: string;
+  weight: number;
+}
+
+export interface CustomFieldDefinition extends TicketTypeDefinition {
+  kind: CustomFieldKind;
+  isRequired: boolean;
+  optionsJson: string;
+}
+
+export interface TicketSchema {
+  types: TicketTypeDefinition[];
+  priorities: TicketPriorityDefinition[];
+  customFields: CustomFieldDefinition[];
+}
+
+export interface SlaPolicy {
+  id: string;
+  projectId: string | null;
+  name: string;
+  timeZone: string;
+  isDefault: boolean;
+  isActive: boolean;
+  workingDaysMask: number;
+  businessDayStartMinutes: number;
+  businessDayEndMinutes: number;
+  warningMinutesBefore: number;
+  pauseStatusKeys: string[];
+  targets: { priorityKey: string; firstResponseMinutes: number; resolutionMinutes: number }[];
+  holidays: { date: string; name: string }[];
+}
+
+export interface CustomRole {
+  id: string;
+  name: string;
+  description: string | null;
+  permissions: string[];
+  isActive: boolean;
+  grantCount: number;
+}
+
+export interface RetentionSettings {
+  storageQuotaBytes: number;
+  storageUsedBytes: number;
+  notificationRetentionDays: number;
+  auditRetentionDays: number;
+  deletedAttachmentRetentionDays: number;
+  reportRetentionDays: number;
+}
+
+export interface EmailOutboxPage {
+  items: {
+    id: string;
+    recipientEmail: string;
+    subject: string;
+    templateKey: string;
+    status: 'Pending' | 'Sent' | 'Failed';
+    attempts: number;
+    nextAttemptAt: string;
+    sentAt: string | null;
+    lastError: string | null;
+    createdAt: string;
+  }[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+export interface TicketRelationship {
+  id: string;
+  relatedTicketId: string;
+  relatedTicketKey: string;
+  relatedTicketTitle: string;
+  type: 'RelatesTo' | 'Duplicates' | 'Blocks';
+  direction: 'incoming' | 'outgoing';
+  createdAt: string;
+}
+
+export interface ReportSchedule {
+  id: string;
+  projectId: string | null;
+  name: string;
+  reportType: string;
+  filterSnapshotJson: string;
+  language: AppLanguage;
+  format: 'Pdf' | 'Csv';
+  frequency: 'Daily' | 'Weekly' | 'Monthly';
+  isActive: boolean;
+  nextRunAt: string;
+  lastRunAt: string | null;
 }

@@ -36,8 +36,11 @@ public static class NotificationEndpoints
         }
 
         var userId = httpContext.User.UserId();
-        var accessibleProjectIds = authorization.ProjectRoles.Keys.ToArray();
-        var allProjects = authorization.AllProjectRoles.Count > 0;
+        var accessibleProjectIds = authorization.ProjectRoles.Keys
+            .Concat(authorization.ProjectPermissions.Keys)
+            .Distinct()
+            .ToArray();
+        var allProjects = authorization.AllProjectRoles.Count > 0 || authorization.AllProjectPermissions.Count > 0;
         var query = dbContext.Notifications.AsNoTracking().Where(entity =>
             entity.RecipientUserId == userId &&
             (entity.ProjectId == null || allProjects || accessibleProjectIds.Contains(entity.ProjectId.Value)));
@@ -142,7 +145,7 @@ public static class NotificationEndpoints
         var preferences = await dbContext.NotificationPreferences.AsNoTracking()
             .SingleOrDefaultAsync(entity => entity.UserId == userId, cancellationToken);
         return TypedResults.Ok(preferences is null
-            ? new NotificationPreferencesResponse(true, true, true, false)
+            ? new NotificationPreferencesResponse(true, true, true, false, false, 8)
             : ToResponse(preferences));
     }
 
@@ -176,6 +179,8 @@ public static class NotificationEndpoints
         preferences.WatcherUpdatesEnabled = request.WatcherUpdatesEnabled;
         preferences.DueDateUpdatesEnabled = request.DueDateUpdatesEnabled;
         preferences.DigestEnabled = request.DigestEnabled;
+        preferences.EmailEnabled = request.EmailEnabled;
+        preferences.DigestHourLocal = Math.Clamp(request.DigestHourLocal, 0, 23);
         await dbContext.SaveChangesAsync(cancellationToken);
         return TypedResults.Ok(ToResponse(preferences));
     }
@@ -184,7 +189,9 @@ public static class NotificationEndpoints
         entity.CommentsEnabled,
         entity.WatcherUpdatesEnabled,
         entity.DueDateUpdatesEnabled,
-        entity.DigestEnabled);
+        entity.DigestEnabled,
+        entity.EmailEnabled,
+        entity.DigestHourLocal);
 }
 
 public sealed record SetNotificationReadRequest(bool Read);
@@ -212,4 +219,6 @@ public sealed record NotificationPreferencesResponse(
     bool CommentsEnabled,
     bool WatcherUpdatesEnabled,
     bool DueDateUpdatesEnabled,
-    bool DigestEnabled);
+    bool DigestEnabled,
+    bool EmailEnabled,
+    int DigestHourLocal);

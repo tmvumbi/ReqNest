@@ -54,6 +54,15 @@
   >
     {{ i18n.text('common.save') }}
   </button>
+  @if (
+    filterForm.controls.projectId.value &&
+    store.canManageProject(filterForm.controls.projectId.value)
+  ) {
+    <label class="publish-view"
+      ><input type="checkbox" [(ngModel)]="publishView" />
+      {{ i18n.language() === 'French' ? 'Publier pour le projet' : 'Publish to project' }}</label
+    >
+  }
 </section>
 <form [formGroup]="filterForm" (ngSubmit)="load()" class="filter-bar" aria-label="Ticket filters">
   <div class="field search-field">
@@ -72,6 +81,7 @@
       formControlName="projectId"
       [options]="projects()"
       optionValue="id"
+      [optionLabel]="i18n.language() === 'French' ? 'nameFrench' : 'nameEnglish'"
       [showClear]="true"
       ><ng-template #selectedItem let-project>{{
         project ? projectName(project) : i18n.text('common.all')
@@ -81,7 +91,12 @@
   </div>
   <div class="field">
     <label for="queueFilter">{{ i18n.text('tickets.queue') }}</label
-    ><p-select inputId="queueFilter" formControlName="queue" [options]="queues" optionValue="value"
+    ><p-select
+      inputId="queueFilter"
+      formControlName="queue"
+      [options]="queues"
+      optionValue="value"
+      optionLabel="value"
       ><ng-template #selectedItem let-option>{{
         option ? i18n.text(option.labelKey) : i18n.text('common.all')
       }}</ng-template
@@ -91,7 +106,7 @@
   <button pButton type="submit" [loading]="loading()">{{ i18n.text('common.search') }}</button>
 </form>
 <section class="content-panel table-panel">
-  @if (store.canManageProjects() && selectedTickets.length) {
+  @if (store.canBulkTickets() && selectedTickets.length) {
     <div
       class="bulk-bar"
       role="region"
@@ -139,7 +154,7 @@
   >
     <ng-template #header
       ><tr>
-        @if (store.canManageProjects()) {
+        @if (store.canBulkTickets()) {
           <th><p-table-header-checkbox /></th>
         }
         <th>{{ i18n.text('tickets.key') }}</th>
@@ -153,7 +168,7 @@
     >
     <ng-template #body let-ticket
       ><tr>
-        @if (store.canManageProjects()) {
+        @if (store.canBulkTickets()) {
           <td><p-table-checkbox [value]="ticket" /></td>
         }
         <td>
@@ -176,7 +191,7 @@
     >
     <ng-template #emptymessage
       ><tr>
-        <td [attr.colspan]="store.canManageProjects() ? 8 : 7">{{ i18n.text('common.empty') }}</td>
+        <td [attr.colspan]="store.canBulkTickets() ? 8 : 7">{{ i18n.text('common.empty') }}</td>
       </tr></ng-template
     >
   </p-table>

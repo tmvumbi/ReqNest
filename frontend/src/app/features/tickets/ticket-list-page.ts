@@ -50,6 +50,7 @@ export class TicketListPage {
   selectedTickets: TicketListItem[] = [];
   selectedViewId = '';
   viewName = '';
+  publishView = false;
   bulkPriority: TicketPriority | null = null;
   readonly priorities: TicketPriority[] = ['Low', 'Normal', 'High', 'Urgent'];
   readonly queues = [
@@ -115,9 +116,11 @@ export class TicketListPage {
         name,
         this.filterForm.controls.projectId.value || null,
         this.filterForm.getRawValue(),
+        this.publishView,
       ),
     );
     this.viewName = '';
+    this.publishView = false;
     await this.loadViews();
   }
 
@@ -145,25 +148,25 @@ export class TicketListPage {
   }
 
   async bulkUpdate(request: { priority?: TicketPriority; archived?: boolean }): Promise<void> {
+    if (!this.selectedTickets.length) return;
+    const payload = {
+      ticketIds: this.selectedTickets.map((ticket) => ticket.id),
+      priority: request.priority ?? null,
+      assigneeSpecified: false,
+      assigneeUserId: null,
+      labels: null,
+      archived: request.archived ?? null,
+    };
+    const preview = await firstValueFrom(this.api.previewBulkTickets(payload));
     if (
-      !this.selectedTickets.length ||
       !confirm(
         this.i18n.language() === 'French'
-          ? `Modifier ${this.selectedTickets.length} ticket(s) ?`
-          : `Update ${this.selectedTickets.length} ticket(s)?`,
+          ? `Modifier ${preview.updated} ticket(s) ? ${preview.failures.length} échec(s) prévu(s).`
+          : `Update ${preview.updated} ticket(s)? ${preview.failures.length} expected failure(s).`,
       )
     )
       return;
-    await firstValueFrom(
-      this.api.bulkTickets({
-        ticketIds: this.selectedTickets.map((ticket) => ticket.id),
-        priority: request.priority ?? null,
-        assigneeSpecified: false,
-        assigneeUserId: null,
-        labels: null,
-        archived: request.archived ?? null,
-      }),
-    );
+    await firstValueFrom(this.api.bulkTickets(payload));
     this.selectedTickets = [];
     this.bulkPriority = null;
     await this.load();

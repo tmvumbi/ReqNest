@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -27,9 +28,15 @@ public static class ReportEndpoints
             .RequireAuthorization()
             .WithTags("Reports");
         group.MapGet("/{reportType}", GetAsync);
+        group.MapGet("/{reportType}/csv", ExportCsvAsync);
         group.MapPost("/exports", ExportAsync);
         group.MapGet("/exports", ListExportsAsync);
         group.MapGet("/exports/{exportId:guid}/download", DownloadExportAsync);
+        group.MapGet("/schedules", ListSchedulesAsync);
+        group.MapPost("/schedules", CreateScheduleAsync);
+        group.MapPut("/schedules/{scheduleId:guid}", UpdateScheduleAsync);
+        group.MapDelete("/schedules/{scheduleId:guid}", DeleteScheduleAsync);
+        group.MapPost("/schedules/{scheduleId:guid}/run", RunScheduleAsync);
         endpoints.MapGet("/api/dashboard", DashboardAsync)
             .RequireAuthorization()
             .WithTags("Dashboard");
@@ -54,6 +61,229 @@ public static class ReportEndpoints
         return result.Error ?? TypedResults.Ok(result.Report!);
     }
 
+    private static async Task<IResult> ExportCsvAsync(
+        string reportType,
+        Guid? projectId,
+        DateTimeOffset? from,
+        DateTimeOffset? to,
+        TicketPriority? priority,
+        TicketType? type,
+        Guid? assigneeUserId,
+        bool? includeArchived,
+        AppLanguage? language,
+        HttpContext httpContext,
+        ReqNestDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        var authorization = httpContext.TenantAuthorization();
+        if (authorization is null)
+        {
+            return ApiProblems.TenantRequired(httpContext);
+        }
+
+        if (projectId is not null && !authorization.CanExportReports(projectId.Value))
+        {
+            return ApiProblems.Forbidden(httpContext);
+        }
+
+        var filter = new ReportFilterRequest(projectId, from, to, priority, type, assigneeUserId, includeArchived ?? false);
+        var result = await BuildReportAsync(reportType, filter, httpContext, dbContext, cancellationToken);
+        if (result.Error is not null)
+        {
+            return result.Error;
+        }
+
+        var french = language == AppLanguage.French;
+        var csv = BuildCsv(result.Report!, french);
+        return Results.File(
+            Encoding.UTF8.GetBytes(csv),
+            "text/csv; charset=utf-8",
+            $"reqnest-{reportType}-{DateTimeOffset.UtcNow:yyyyMMddHHmmss}.csv");
+    }
+
+    private static async Task<IResult> ListSchedulesAsync(
+        HttpContext httpContext,
+        ReqNestDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        var authorization = httpContext.TenantAuthorization();
+        if (authorization is null)
+        {
+            return ApiProblems.TenantRequired(httpContext);
+        }
+
+        var userId = httpContext.User.UserId();
+        var schedules = await dbContext.ReportSchedules.AsNoTracking()
+            .Where(entity => entity.OwnerUserId == userId)
+            .OrderBy(entity => entity.Name)
+            .Select(entity => new ReportScheduleResponse(
+                entity.Id,
+                entity.ProjectId,
+                entity.Name,
+                entity.ReportType,
+                entity.FilterSnapshotJson,
+                entity.Language,
+                entity.Format,
+                entity.Frequency,
+                entity.IsActive,
+                entity.NextRunAt,
+                entity.LastRunAt))
+            .ToArrayAsync(cancellationToken);
+        return TypedResults.Ok<IReadOnlyCollection<ReportScheduleResponse>>(schedules);
+    }
+
+    private static async Task<IResult> CreateScheduleAsync(
+        UpsertReportScheduleRequest request,
+        HttpContext httpContext,
+        ReqNestDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        var authorization = httpContext.TenantAuthorization();
+        var error = ValidateSchedule(request, authorization, httpContext);
+        if (error is not null)
+        {
+            return error;
+        }
+
+        var schedule = new ReportSchedule
+        {
+            TenantId = authorization!.TenantId,
+            OwnerUserId = httpContext.User.UserId(),
+        };
+        Apply(schedule, request);
+        dbContext.ReportSchedules.Add(schedule);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return TypedResults.Created($"/api/reports/schedules/{schedule.Id}", ToResponse(schedule));
+    }
+
+    private static async Task<IResult> UpdateScheduleAsync(
+        Guid scheduleId,
+        UpsertReportScheduleRequest request,
+        HttpContext httpContext,
+        ReqNestDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        var authorization = httpContext.TenantAuthorization();
+        var error = ValidateSchedule(request, authorization, httpContext);
+        if (error is not null)
+        {
+            return error;
+        }
+
+        var userId = httpContext.User.UserId();
+        var schedule = await dbContext.ReportSchedules.SingleOrDefaultAsync(
+            entity => entity.Id == scheduleId && entity.OwnerUserId == userId,
+            cancellationToken);
+        if (schedule is null)
+        {
+            return ApiProblems.NotFound(httpContext, "Report schedule");
+        }
+
+        Apply(schedule, request);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return TypedResults.Ok(ToResponse(schedule));
+    }
+
+    private static async Task<IResult> DeleteScheduleAsync(
+        Guid scheduleId,
+        HttpContext httpContext,
+        ReqNestDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        if (httpContext.TenantAuthorization() is null)
+        {
+            return ApiProblems.TenantRequired(httpContext);
+        }
+
+        var userId = httpContext.User.UserId();
+        var schedule = await dbContext.ReportSchedules.SingleOrDefaultAsync(
+            entity => entity.Id == scheduleId && entity.OwnerUserId == userId,
+            cancellationToken);
+        if (schedule is null)
+        {
+            return ApiProblems.NotFound(httpContext, "Report schedule");
+        }
+
+        dbContext.ReportSchedules.Remove(schedule);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return TypedResults.NoContent();
+    }
+
+    internal static async Task<IResult> RunScheduleAsync(
+        Guid scheduleId,
+        HttpContext httpContext,
+        ReqNestDbContext dbContext,
+        IReportPdfGenerator pdfGenerator,
+        IBlobStorageService blobStorage,
+        IOptions<BlobStorageOptions> storageOptions,
+        INotificationService notificationService,
+        CancellationToken cancellationToken)
+    {
+        var authorization = httpContext.TenantAuthorization();
+        if (authorization is null)
+        {
+            return ApiProblems.TenantRequired(httpContext);
+        }
+
+        var userId = httpContext.User.UserId();
+        var schedule = await dbContext.ReportSchedules.SingleOrDefaultAsync(
+            entity => entity.Id == scheduleId && entity.OwnerUserId == userId,
+            cancellationToken);
+        if (schedule is null)
+        {
+            return ApiProblems.NotFound(httpContext, "Report schedule");
+        }
+
+        var filter = JsonSerializer.Deserialize<ReportFilterRequest>(schedule.FilterSnapshotJson);
+        if (filter is null)
+        {
+            return ApiProblems.Conflict(httpContext, "The report schedule filter snapshot is invalid.");
+        }
+
+        schedule.LastRunAt = DateTimeOffset.UtcNow;
+        schedule.NextRunAt = NextRun(schedule.LastRunAt.Value, schedule.Frequency);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        if (schedule.Format == ReportExportFormat.Pdf)
+        {
+            return await ExportAsync(
+                new CreateReportExportRequest(schedule.ReportType, filter, schedule.Language),
+                httpContext,
+                dbContext,
+                pdfGenerator,
+                blobStorage,
+                storageOptions,
+                notificationService,
+                cancellationToken);
+        }
+
+        var result = await BuildReportAsync(schedule.ReportType, filter, httpContext, dbContext, cancellationToken);
+        if (result.Error is not null)
+        {
+            return result.Error;
+        }
+
+        var csv = BuildCsv(result.Report!, schedule.Language == AppLanguage.French);
+        var completedAt = schedule.LastRunAt ?? DateTimeOffset.UtcNow;
+        await notificationService.AddAsync(new NotificationMessage(
+            authorization.TenantId,
+            [schedule.OwnerUserId],
+            schedule.OwnerUserId,
+            NotificationType.ReportReady,
+            schedule.ProjectId,
+            null,
+            $"report-schedule-ready:{schedule.Id}:{completedAt:O}",
+            $"Scheduled report '{schedule.Name}' is ready.",
+            $"Le rapport planifié « {schedule.Name} » est prêt.",
+            "/app/reports",
+            schedule.Id.ToString(),
+            NotifyActor: true), cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return Results.File(
+            Encoding.UTF8.GetBytes(csv),
+            "text/csv; charset=utf-8",
+            $"reqnest-{schedule.ReportType}-{DateTimeOffset.UtcNow:yyyyMMddHHmmss}.csv");
+    }
+
     private static async Task<IResult> ExportAsync(
         CreateReportExportRequest request,
         HttpContext httpContext,
@@ -71,12 +301,14 @@ public static class ReportEndpoints
         }
 
         var projectIds = request.Filter.ProjectId is null
-            ? authorization.ProjectRoles.Keys.ToArray()
+            ? authorization.ProjectRoles.Keys.Concat(authorization.ProjectPermissions.Keys).Distinct().ToArray()
             : [request.Filter.ProjectId.Value];
         var canExport = request.Filter.ProjectId is not null
-            ? authorization.CanManageProject(request.Filter.ProjectId.Value)
-            : authorization.IsTenantAdministrator() || authorization.HasTenantRole(AppRole.ProjectManager) ||
-              projectIds.Length > 0 && projectIds.All(authorization.CanManageProject);
+            ? authorization.CanExportReports(request.Filter.ProjectId.Value)
+            : authorization.IsTenantAdministrator() ||
+              authorization.HasTenantRole(AppRole.ProjectManager) ||
+              authorization.AllProjectPermissions.Contains(AppPermission.ReportExport, StringComparer.Ordinal) ||
+              projectIds.Length > 0 && projectIds.All(authorization.CanExportReports);
         if (!canExport)
         {
             return ApiProblems.Forbidden(httpContext);
@@ -248,8 +480,8 @@ public static class ReportEndpoints
             return ApiProblems.TenantRequired(httpContext);
         }
 
-        var projectIds = authorization.ProjectRoles.Keys.ToArray();
-        var all = authorization.AllProjectRoles.Count > 0;
+        var projectIds = authorization.ProjectRoles.Keys.Concat(authorization.ProjectPermissions.Keys).Distinct().ToArray();
+        var all = authorization.AllProjectRoles.Count > 0 || authorization.AllProjectPermissions.Count > 0;
         var userId = httpContext.User.UserId();
         var now = DateTimeOffset.UtcNow;
         var query = dbContext.Tickets.AsNoTracking()
@@ -290,8 +522,8 @@ public static class ReportEndpoints
             return new ReportBuildResult(null, ApiProblems.NotFound(httpContext, "Project"));
         }
 
-        var projectIds = authorization.ProjectRoles.Keys.ToArray();
-        var all = authorization.AllProjectRoles.Count > 0;
+        var projectIds = authorization.ProjectRoles.Keys.Concat(authorization.ProjectPermissions.Keys).Distinct().ToArray();
+        var all = authorization.AllProjectRoles.Count > 0 || authorization.AllProjectPermissions.Count > 0;
         var query = dbContext.Tickets.AsNoTracking()
             .Where(entity => all || projectIds.Contains(entity.ProjectId));
         if (!filter.IncludeArchived)
@@ -624,6 +856,83 @@ public static class ReportEndpoints
         };
     }
 
+    private static string BuildCsv(ReportResponse report, bool french)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine(string.Join(",", report.Columns.Select(column => CsvCell(LocalizeColumn(column, french)))));
+        foreach (var row in report.Rows)
+        {
+            builder.AppendLine(string.Join(",", report.Columns.Select(column =>
+                CsvCell(LocalizeReportValue(row.GetValueOrDefault(column), french)))));
+        }
+
+        return builder.ToString();
+    }
+
+    private static string CsvCell(string value) =>
+        $"\"{value.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
+
+    private static IResult? ValidateSchedule(
+        UpsertReportScheduleRequest request,
+        TenantAuthorization? authorization,
+        HttpContext context)
+    {
+        if (authorization is null)
+        {
+            return ApiProblems.TenantRequired(context);
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length > 160 ||
+            !ReportTypes.Contains(request.ReportType, StringComparer.Ordinal) ||
+            request.Filter.ValueKind != JsonValueKind.Object)
+        {
+            return ApiProblems.Validation(context, "The report schedule is invalid.");
+        }
+
+        if (request.ProjectId is not null && !authorization.CanExportReports(request.ProjectId.Value))
+        {
+            return ApiProblems.Forbidden(context);
+        }
+
+        return null;
+    }
+
+    private static void Apply(ReportSchedule schedule, UpsertReportScheduleRequest request)
+    {
+        schedule.ProjectId = request.ProjectId;
+        schedule.Name = request.Name.Trim();
+        schedule.ReportType = request.ReportType;
+        schedule.FilterSnapshotJson = request.Filter.GetRawText();
+        schedule.Language = request.Language;
+        schedule.Format = request.Format;
+        schedule.Frequency = request.Frequency;
+        schedule.IsActive = request.IsActive;
+        schedule.NextRunAt = request.NextRunAt > DateTimeOffset.UtcNow
+            ? request.NextRunAt
+            : NextRun(DateTimeOffset.UtcNow, request.Frequency);
+    }
+
+    private static DateTimeOffset NextRun(DateTimeOffset from, ReportScheduleFrequency frequency) => frequency switch
+    {
+        ReportScheduleFrequency.Daily => from.AddDays(1),
+        ReportScheduleFrequency.Weekly => from.AddDays(7),
+        ReportScheduleFrequency.Monthly => from.AddMonths(1),
+        _ => from.AddDays(1),
+    };
+
+    private static ReportScheduleResponse ToResponse(ReportSchedule entity) => new(
+        entity.Id,
+        entity.ProjectId,
+        entity.Name,
+        entity.ReportType,
+        entity.FilterSnapshotJson,
+        entity.Language,
+        entity.Format,
+        entity.Frequency,
+        entity.IsActive,
+        entity.NextRunAt,
+        entity.LastRunAt);
+
     private static ReportExportResponse ToResponse(ReportExport entity) => new(
         entity.Id,
         entity.ReportType,
@@ -687,6 +996,30 @@ public sealed record ReportExportResponse(
     ReportExportStatus Status,
     DateTimeOffset ExpiresAt,
     DateTimeOffset CreatedAt);
+
+public sealed record UpsertReportScheduleRequest(
+    Guid? ProjectId,
+    string Name,
+    string ReportType,
+    JsonElement Filter,
+    AppLanguage Language,
+    ReportExportFormat Format,
+    ReportScheduleFrequency Frequency,
+    bool IsActive,
+    DateTimeOffset NextRunAt);
+
+public sealed record ReportScheduleResponse(
+    Guid Id,
+    Guid? ProjectId,
+    string Name,
+    string ReportType,
+    string FilterSnapshotJson,
+    AppLanguage Language,
+    ReportExportFormat Format,
+    ReportScheduleFrequency Frequency,
+    bool IsActive,
+    DateTimeOffset NextRunAt,
+    DateTimeOffset? LastRunAt);
 
 public sealed record DashboardTicketResponse(Guid Id, string Key, string Title, TicketPriority Priority, DateTimeOffset UpdatedAt);
 

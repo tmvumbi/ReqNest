@@ -190,6 +190,21 @@
         >
       </div>
     }
+    @if (customRoles().length) {
+      <div class="field">
+        <label for="manageCustomRoles">{{
+          i18n.language() === 'French' ? 'Rôles personnalisés' : 'Custom roles'
+        }}</label>
+        <p-multiselect
+          inputId="manageCustomRoles"
+          formControlName="customRoleIds"
+          [options]="customRoles()"
+          optionLabel="name"
+          optionValue="id"
+          display="chip"
+        />
+      </div>
+    }
     <div class="dialog-actions">
       <button
         pButton

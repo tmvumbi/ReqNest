@@ -30,6 +30,16 @@ public sealed class Tenant : Entity
 
     public string? ReportFooterText { get; set; }
 
+    public long StorageQuotaBytes { get; set; } = 5L * 1024 * 1024 * 1024;
+
+    public int NotificationRetentionDays { get; set; } = 180;
+
+    public int AuditRetentionDays { get; set; } = 730;
+
+    public int DeletedAttachmentRetentionDays { get; set; } = 30;
+
+    public int ReportRetentionDays { get; set; } = 7;
+
     public ICollection<TenantMembership> Memberships { get; set; } = [];
 
     public ICollection<Project> Projects { get; set; } = [];
@@ -66,4 +76,6 @@ public sealed class Project : Entity
     public int? FirstResponseTargetMinutes { get; set; }
 
     public int? ResolutionTargetMinutes { get; set; }
+
+    public Guid? SlaPolicyId { get; set; }
 }

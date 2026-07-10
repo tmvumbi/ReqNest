@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using ReqNest.Api.Authentication;
+using ReqNest.Api.Background;
 using ReqNest.Api.Endpoints;
 using ReqNest.Infrastructure;
 using ReqNest.Infrastructure.Persistence;
@@ -13,6 +14,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 builder.Services.AddInfrastructure(builder.Configuration);
+if (builder.Configuration.GetValue<bool>("Reports:RunScheduleWorker"))
+{
+    builder.Services.AddHostedService<ReportScheduleWorker>();
+}
 builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services
@@ -113,6 +118,10 @@ app.MapNotificationEndpoints();
 app.MapSavedViewEndpoints();
 app.MapReportEndpoints();
 app.MapAdministrationEndpoints();
+app.MapConfigurationEndpoints();
+app.MapCustomRoleEndpoints();
+app.MapRelationshipEndpoints();
+app.MapOperationsEndpoints();
 
 app.Run();
 

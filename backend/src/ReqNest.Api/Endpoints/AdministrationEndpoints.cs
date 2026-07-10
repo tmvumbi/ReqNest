@@ -1,3 +1,4 @@
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using ReqNest.Core.Auditing;
@@ -20,6 +21,7 @@ public static class AdministrationEndpoints
             .WithTags("Administration");
         audit.MapGet("/", ListAuditAsync);
         audit.MapGet("/export", ExportAuditAsync);
+        audit.MapGet("/export.csv", ExportAuditCsvAsync);
 
         var branding = endpoints.MapGroup("/api/tenants/current/logos")
             .RequireAuthorization()
@@ -99,6 +101,61 @@ public static class AdministrationEndpoints
             .ToArrayAsync(cancellationToken);
         return TypedResults.Ok<IReadOnlyCollection<AuditEventResponse>>(items);
     }
+
+    private static async Task<IResult> ExportAuditCsvAsync(
+        string? action,
+        string? targetType,
+        Guid? actorUserId,
+        DateTimeOffset? from,
+        DateTimeOffset? to,
+        HttpContext httpContext,
+        ReqNestDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        var authorization = httpContext.TenantAuthorization();
+        if (authorization?.IsTenantAdministrator() != true &&
+            authorization?.AllProjectPermissions.Contains(
+                ReqNest.Core.Identity.AppPermission.AuditView,
+                StringComparer.Ordinal) != true)
+        {
+            return authorization is null ? ApiProblems.TenantRequired(httpContext) : ApiProblems.Forbidden(httpContext);
+        }
+
+        var items = await FilterAudit(dbContext.AuditEvents.AsNoTracking(), action, targetType, actorUserId, from, to)
+            .OrderByDescending(entity => entity.CreatedAt)
+            .Take(20_000)
+            .Select(entity => new AuditEventResponse(
+                entity.Id,
+                entity.ActorUserId,
+                entity.Action,
+                entity.TargetType,
+                entity.TargetId,
+                entity.Summary,
+                entity.CorrelationId,
+                entity.CreatedAt))
+            .ToArrayAsync(cancellationToken);
+        var csv = new StringBuilder("Id,ActorUserId,Action,TargetType,TargetId,Summary,CorrelationId,CreatedAt\r\n");
+        foreach (var item in items)
+        {
+            csv.AppendJoin(',',
+                Csv(item.Id.ToString()),
+                Csv(item.ActorUserId?.ToString() ?? string.Empty),
+                Csv(item.Action),
+                Csv(item.TargetType),
+                Csv(item.TargetId),
+                Csv(item.Summary),
+                Csv(item.CorrelationId ?? string.Empty),
+                Csv(item.CreatedAt.ToString("O")));
+            csv.Append("\r\n");
+        }
+
+        return Results.File(
+            Encoding.UTF8.GetBytes(csv.ToString()),
+            "text/csv; charset=utf-8",
+            $"reqnest-audit-{DateTimeOffset.UtcNow:yyyyMMddHHmmss}.csv");
+    }
+
+    private static string Csv(string value) => $"\"{value.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
 
     private static async Task<IResult> UploadLogoAsync(
         string variant,

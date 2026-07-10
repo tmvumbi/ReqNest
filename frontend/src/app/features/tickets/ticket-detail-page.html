@@ -59,10 +59,10 @@
           }}
         </button>
       }
-      @if (store.canMaintainTickets()) {
+      @if (store.canMaintainProject(item.projectId)) {
         <button pButton type="button" (click)="openEdit()">{{ i18n.text('common.edit') }}</button>
       }
-      @if (store.canManageProjects()) {
+      @if (store.canArchiveProject(item.projectId)) {
         <button pButton type="button" severity="secondary" (click)="setArchived(!item.isArchived)">
           {{ item.isArchived ? i18n.text('common.restore') : i18n.text('common.archive') }}
         </button>
@@ -205,7 +205,7 @@
       <section class="content-panel">
         <h2>{{ i18n.text('tickets.transition') }}</h2>
         <div class="transition-list">
-          @if (store.canMaintainTickets()) {
+          @if (store.canMaintainProject(item.projectId)) {
             @for (status of allowedStatuses(); track status.id) {
               <button
                 pButton
@@ -237,7 +237,7 @@
           </div>
           <div>
             <dt>{{ i18n.text('tickets.type') }}</dt>
-            <dd>{{ i18n.ticketType(item.type) }}</dd>
+            <dd>{{ item.typeKey }}</dd>
           </div>
           <div>
             <dt>{{ i18n.text('tickets.reporter') }}</dt>
@@ -247,11 +247,85 @@
             <dt>{{ i18n.text('tickets.due') }}</dt>
             <dd>{{ item.dueAt ? (item.dueAt | localizedDate: 'medium') : '—' }}</dd>
           </div>
+          <div>
+            <dt>SLA</dt>
+            <dd>{{ item.slaPolicyName || '—' }} · {{ item.slaState }}</dd>
+          </div>
+          @if (item.resolutionTargetAt) {
+            <div>
+              <dt>
+                {{ i18n.language() === 'French' ? 'Cible de résolution' : 'Resolution target' }}
+              </dt>
+              <dd>{{ item.resolutionTargetAt | localizedDate: 'medium' }}</dd>
+            </div>
+          }
+          @if (item.parentTicketId) {
+            <div>
+              <dt>{{ i18n.language() === 'French' ? 'Ticket parent' : 'Parent ticket' }}</dt>
+              <dd>
+                <a [routerLink]="['/app/tickets', item.parentTicketId]">{{
+                  item.parentTicketId
+                }}</a>
+                @if (store.canMaintainProject(item.projectId)) {
+                  <button type="button" class="link-button" (click)="clearParent()">×</button>
+                }
+              </dd>
+            </div>
+          }
+          @for (field of item.customFields | keyvalue; track field.key) {
+            <div>
+              <dt>{{ field.key }}</dt>
+              <dd>{{ field.value }}</dd>
+            </div>
+          }
         </dl>
       </section>
       <section class="content-panel">
+        <h2>{{ i18n.language() === 'French' ? 'Relations' : 'Relationships' }}</h2>
+        <ul class="attachment-list">
+          @for (relation of relationships(); track relation.id) {
+            <li>
+              <div>
+                <strong>{{ relation.type }}</strong
+                ><a [routerLink]="['/app/tickets', relation.relatedTicketId]"
+                  >{{ relation.relatedTicketKey }} · {{ relation.relatedTicketTitle }}</a
+                >
+              </div>
+              <small>{{ relation.direction }}</small>
+            </li>
+          } @empty {
+            <li class="state-message">{{ i18n.text('common.empty') }}</li>
+          }
+        </ul>
+        @if (store.canMaintainProject(item.projectId)) {
+          <div class="relationship-form">
+            <input
+              pInputText
+              [(ngModel)]="relationshipTargetId"
+              [placeholder]="
+                i18n.language() === 'French' ? 'ID du ticket associé' : 'Related ticket ID'
+              "
+            />
+            <p-select
+              [(ngModel)]="relationshipType"
+              [options]="relationshipTypes"
+              ariaLabel="Relationship type"
+            />
+            <button
+              pButton
+              type="button"
+              size="small"
+              (click)="addRelationship()"
+              [disabled]="!relationshipTargetId"
+            >
+              {{ i18n.language() === 'French' ? 'Associer' : 'Link' }}
+            </button>
+          </div>
+        }
+      </section>
+      <section class="content-panel">
         <h2>{{ i18n.text('tickets.attachments') }}</h2>
-        @if (store.canMaintainTickets()) {
+        @if (store.canMaintainProject(item.projectId)) {
           <label class="file-button"
             ><input
               type="file"
@@ -272,6 +346,18 @@
                 >
               </div>
               <div class="attachment-actions">
+                @if (canPreview(attachment)) {
+                  <button
+                    pButton
+                    type="button"
+                    size="small"
+                    severity="secondary"
+                    [outlined]="true"
+                    (click)="previewAttachment(attachment)"
+                  >
+                    {{ i18n.language() === 'French' ? 'Aperçu' : 'Preview' }}
+                  </button>
+                }
                 <button
                   pButton
                   type="button"
@@ -282,7 +368,7 @@
                 >
                   {{ i18n.language() === 'French' ? 'Télécharger' : 'Download' }}
                 </button>
-                @if (store.canMaintainTickets()) {
+                @if (store.canMaintainProject(item.projectId)) {
                   <button
                     pButton
                     type="button"

@@ -24,7 +24,10 @@ public sealed record TenantAccessSummary(
     Guid TenantId,
     string TenantName,
     string TenantShortName,
-    IReadOnlyCollection<AppRole> Roles);
+    IReadOnlyCollection<AppRole> Roles,
+    IReadOnlyCollection<string> Permissions,
+    IReadOnlyCollection<string> CustomRoles,
+    IReadOnlyDictionary<Guid, IReadOnlyCollection<string>> ProjectPermissions);
 
 public sealed record AuthenticatedSession(
     Guid UserId,
@@ -93,16 +96,26 @@ public sealed record TenantAuthorization(
     Guid TenantId,
     Guid MembershipId,
     IReadOnlyCollection<AppRole> AllProjectRoles,
-    IReadOnlyDictionary<Guid, IReadOnlyCollection<AppRole>> ProjectRoles)
+    IReadOnlyDictionary<Guid, IReadOnlyCollection<AppRole>> ProjectRoles,
+    IReadOnlyCollection<string> AllProjectPermissions,
+    IReadOnlyDictionary<Guid, IReadOnlyCollection<string>> ProjectPermissions)
 {
     public bool HasTenantRole(AppRole role) => AllProjectRoles.Contains(role);
 
     public bool CanAccessProject(Guid projectId) =>
-        AllProjectRoles.Count > 0 || ProjectRoles.ContainsKey(projectId);
+        AllProjectRoles.Count > 0 ||
+        ProjectRoles.ContainsKey(projectId) ||
+        AllProjectPermissions.Count > 0 ||
+        ProjectPermissions.ContainsKey(projectId);
 
     public bool HasProjectRole(Guid projectId, params AppRole[] roles) =>
         roles.Any(AllProjectRoles.Contains) ||
         (ProjectRoles.TryGetValue(projectId, out var scopedRoles) && roles.Any(scopedRoles.Contains));
+
+    public bool HasPermission(Guid projectId, string permission) =>
+        AllProjectPermissions.Contains(permission, StringComparer.Ordinal) ||
+        ProjectPermissions.TryGetValue(projectId, out var scopedPermissions) &&
+        scopedPermissions.Contains(permission, StringComparer.Ordinal);
 }
 
 public interface ITenantAuthorizationService

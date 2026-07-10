@@ -118,9 +118,20 @@ import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
         }}</label
       ><label for="digestEnabled"
         ><p-toggleswitch inputId="digestEnabled" [(ngModel)]="digestEnabled" />{{
-          i18n.language() === 'French' ? 'Résumé par courriel (phase 2)' : 'Email digest (phase 2)'
+          i18n.language() === 'French' ? 'Résumé par courriel' : 'Email digest'
         }}</label
-      ><button pButton type="button" (click)="savePreferences()">
+      ><label for="emailEnabled"
+        ><p-toggleswitch inputId="emailEnabled" [(ngModel)]="emailEnabled" />{{
+          i18n.language() === 'French' ? 'Livraison par courriel' : 'Email delivery'
+        }}</label
+      >
+      <div class="field">
+        <label for="digestHour">{{
+          i18n.language() === 'French' ? 'Heure du résumé' : 'Digest hour'
+        }}</label>
+        <p-select inputId="digestHour" [(ngModel)]="digestHourLocal" [options]="digestHours" />
+      </div>
+      <button pButton type="button" (click)="savePreferences()">
         {{ i18n.text('common.save') }}
       </button>
     </section>
@@ -232,6 +243,9 @@ export class NotificationsPage {
   watcherUpdatesEnabled = true;
   dueDateUpdatesEnabled = true;
   digestEnabled = false;
+  emailEnabled = false;
+  digestHourLocal = 8;
+  readonly digestHours = Array.from({ length: 24 }, (_, hour) => hour);
 
   constructor() {
     void this.initialize();
@@ -272,6 +286,8 @@ export class NotificationsPage {
         watcherUpdatesEnabled: this.watcherUpdatesEnabled,
         dueDateUpdatesEnabled: this.dueDateUpdatesEnabled,
         digestEnabled: this.digestEnabled,
+        emailEnabled: this.emailEnabled,
+        digestHourLocal: this.digestHourLocal,
       }),
     );
   }

@@ -25,6 +25,16 @@ import {
   Workflow,
   NotificationPreferences,
   SavedView,
+  CustomFieldDefinition,
+  CustomRole,
+  EmailOutboxPage,
+  ReportSchedule,
+  RetentionSettings,
+  SlaPolicy,
+  TicketRelationship,
+  TicketSchema,
+  TicketTypeDefinition,
+  TicketPriorityDefinition,
 } from './api-models';
 
 @Injectable({ providedIn: 'root' })
@@ -203,6 +213,10 @@ export class ApiClient {
     assigneeUserId: string | null;
     labels: string[];
     dueAt: string | null;
+    typeKey?: string;
+    priorityKey?: string;
+    customFields?: Record<string, unknown>;
+    parentTicketId?: string | null;
   }) {
     return this.http.post<TicketDetail>('/api/tickets', request, {
       headers: { 'Idempotency-Key': crypto.randomUUID() },
@@ -228,6 +242,9 @@ export class ApiClient {
       labels: string[];
       dueAt: string | null;
       resolutionSummary: string | null;
+      typeKey?: string;
+      priorityKey?: string;
+      customFields?: Record<string, unknown>;
     },
   ) {
     return this.http.patch<TicketDetail>(`/api/tickets/${ticket.id}`, {
@@ -253,6 +270,23 @@ export class ApiClient {
   }) {
     return this.http.post<{ updated: number; failures: { ticketId: string; code: string }[] }>(
       '/api/tickets/bulk',
+      request,
+    );
+  }
+
+  previewBulkTickets(request: {
+    ticketIds: string[];
+    priority: TicketPriority | null;
+    assigneeSpecified: boolean;
+    assigneeUserId: string | null;
+    labels: string[] | null;
+    archived: boolean | null;
+    priorityKey?: string | null;
+    toStatusId?: string | null;
+    transitionComment?: string | null;
+  }) {
+    return this.http.post<{ updated: number; failures: { ticketId: string; code: string }[] }>(
+      '/api/tickets/bulk/preview',
       request,
     );
   }
@@ -331,7 +365,7 @@ export class ApiClient {
   savedViews() {
     return this.http.get<SavedView[]>('/api/saved-views');
   }
-  saveView(name: string, projectId: string | null, filters: object) {
+  saveView(name: string, projectId: string | null, filters: object, isPublished = false) {
     return this.http.post<SavedView>('/api/saved-views', {
       name,
       projectId,
@@ -339,6 +373,7 @@ export class ApiClient {
       sort: { field: 'updatedAt', direction: 'desc' },
       columns: ['key', 'title', 'project', 'status', 'priority', 'assignee', 'updatedAt'],
       groupBy: null,
+      isPublished,
     });
   }
   deleteSavedView(viewId: string) {
@@ -373,6 +408,36 @@ export class ApiClient {
 
   downloadReport(exportId: string) {
     return this.http.get(`/api/reports/exports/${exportId}/download`, { responseType: 'blob' });
+  }
+
+  reportCsv(reportType: string, language: AppLanguage, projectId?: string) {
+    let params = new HttpParams().set('language', language);
+    if (projectId) params = params.set('projectId', projectId);
+    return this.http.get(`/api/reports/${reportType}/csv`, { params, responseType: 'blob' });
+  }
+
+  reportSchedules() {
+    return this.http.get<ReportSchedule[]>('/api/reports/schedules');
+  }
+
+  createReportSchedule(request: {
+    projectId: string | null;
+    name: string;
+    reportType: string;
+    filter: object;
+    language: AppLanguage;
+    format: 'Pdf' | 'Csv';
+    frequency: 'Daily' | 'Weekly' | 'Monthly';
+    isActive: boolean;
+    nextRunAt: string;
+  }) {
+    return this.http.post<ReportSchedule>('/api/reports/schedules', request);
+  }
+
+  runReportSchedule(scheduleId: string) {
+    return this.http.post(`/api/reports/schedules/${scheduleId}/run`, null, {
+      responseType: 'blob',
+    });
   }
 
   members() {
@@ -446,5 +511,113 @@ export class ApiClient {
 
   auditExport() {
     return this.http.get<AuditPage['items']>('/api/audit/export');
+  }
+
+  auditCsv() {
+    return this.http.get('/api/audit/export.csv', { responseType: 'blob' });
+  }
+
+  ticketSchema(projectId?: string) {
+    return this.http.get<TicketSchema>('/api/configuration/ticket-schema', {
+      params: projectId ? { projectId } : {},
+    });
+  }
+
+  createTicketType(request: Omit<TicketTypeDefinition, 'id'>) {
+    return this.http.post<TicketTypeDefinition>('/api/configuration/ticket-schema/types', request);
+  }
+
+  createTicketPriority(request: Omit<TicketPriorityDefinition, 'id'>) {
+    return this.http.post<TicketPriorityDefinition>(
+      '/api/configuration/ticket-schema/priorities',
+      request,
+    );
+  }
+
+  createCustomField(
+    request: Omit<CustomFieldDefinition, 'id' | 'optionsJson'> & { options: unknown },
+  ) {
+    return this.http.post<CustomFieldDefinition>(
+      '/api/configuration/ticket-schema/custom-fields',
+      request,
+    );
+  }
+
+  slaPolicies() {
+    return this.http.get<SlaPolicy[]>('/api/configuration/sla-policies');
+  }
+
+  createSlaPolicy(request: Omit<SlaPolicy, 'id'>) {
+    return this.http.post<SlaPolicy>('/api/configuration/sla-policies', request);
+  }
+
+  assignSlaPolicy(policyId: string, projectId: string) {
+    return this.http.put<void>(
+      `/api/configuration/sla-policies/${policyId}/projects/${projectId}`,
+      null,
+    );
+  }
+
+  customRoles() {
+    return this.http.get<CustomRole[]>('/api/custom-roles');
+  }
+
+  createCustomRole(request: {
+    name: string;
+    description: string | null;
+    permissions: string[];
+    isActive: boolean;
+  }) {
+    return this.http.post<CustomRole>('/api/custom-roles', request);
+  }
+
+  updateCustomRoleGrants(
+    membershipId: string,
+    grants: { customRoleId: string; allProjects: boolean; projectIds: string[] }[],
+  ) {
+    return this.http.put<void>(`/api/members/${membershipId}/custom-role-grants`, { grants });
+  }
+
+  retentionSettings() {
+    return this.http.get<RetentionSettings>('/api/operations/retention');
+  }
+
+  updateRetentionSettings(request: Omit<RetentionSettings, 'storageUsedBytes'>) {
+    return this.http.put<RetentionSettings>('/api/operations/retention', request);
+  }
+
+  retentionPreview() {
+    return this.http.get<Record<string, number>>('/api/operations/retention/preview');
+  }
+
+  runRetention() {
+    return this.http.post<Record<string, number>>('/api/operations/retention/run', null);
+  }
+
+  emailOutbox() {
+    return this.http.get<EmailOutboxPage>('/api/operations/email-outbox');
+  }
+
+  retryEmail(messageId: string) {
+    return this.http.post<void>(`/api/operations/email-outbox/${messageId}/retry`, null);
+  }
+
+  relationships(ticketId: string) {
+    return this.http.get<TicketRelationship[]>(`/api/tickets/${ticketId}/relationships`);
+  }
+
+  createRelationship(ticketId: string, targetTicketId: string, type: TicketRelationship['type']) {
+    return this.http.post<TicketRelationship>(`/api/tickets/${ticketId}/relationships`, {
+      targetTicketId,
+      type,
+    });
+  }
+
+  setParent(ticketId: string, parentTicketId: string | null) {
+    return this.http.put<void>(`/api/tickets/${ticketId}/parent`, { parentTicketId });
+  }
+
+  previewAttachment(attachmentId: string) {
+    return this.http.get(`/api/attachments/${attachmentId}/preview`, { responseType: 'blob' });
   }
 }

@@ -45,6 +45,7 @@ public static class AttachmentEndpoints
             .RequireAuthorization()
             .WithTags("Attachments");
         attachments.MapGet("/{attachmentId:guid}", DownloadAsync);
+        attachments.MapGet("/{attachmentId:guid}/preview", PreviewAsync);
         attachments.MapDelete("/{attachmentId:guid}", DeleteAsync);
         attachments.MapPost("/{attachmentId:guid}/scan-result", SetScanResultAsync);
         return endpoints;
@@ -101,6 +102,18 @@ public static class AttachmentEndpoints
             return ApiProblems.Forbidden(httpContext);
         }
 
+        var storageQuota = await dbContext.Tenants.AsNoTracking()
+            .Select(entity => entity.StorageQuotaBytes)
+            .SingleAsync(cancellationToken);
+        var storageUsed = await dbContext.Attachments.AsNoTracking()
+            .Where(entity => entity.DeletedAt == null)
+            .SumAsync(entity => (long?)entity.Size, cancellationToken) ?? 0;
+        if (httpContext.Request.ContentLength is { } contentLength &&
+            contentLength > storageQuota - storageUsed)
+        {
+            return ApiProblems.Validation(httpContext, "The tenant storage quota would be exceeded.", "storage_quota_exceeded");
+        }
+
         if (commentId is not null &&
             !await dbContext.TicketComments.AnyAsync(entity => entity.Id == commentId && entity.TicketId == ticketId, cancellationToken))
         {
@@ -141,6 +154,11 @@ public static class AttachmentEndpoints
                 if (size == 0 || size > MaxFileSize)
                 {
                     return ApiProblems.Validation(httpContext, "The file is empty or exceeds the 25 MB limit.", "invalid_file_size");
+                }
+
+                if (size > storageQuota - storageUsed)
+                {
+                    return ApiProblems.Validation(httpContext, "The tenant storage quota would be exceeded.", "storage_quota_exceeded");
                 }
 
                 if (!SignatureMatches(extension, signature))
@@ -226,6 +244,39 @@ public static class AttachmentEndpoints
 
         var stream = await blobStorage.OpenReadAsync(attachment.ContainerName, attachment.BlobName, cancellationToken);
         return Results.Stream(stream, attachment.ContentType, attachment.OriginalFileName, enableRangeProcessing: true);
+    }
+
+    private static async Task<IResult> PreviewAsync(
+        Guid attachmentId,
+        HttpContext httpContext,
+        ReqNestDbContext dbContext,
+        IBlobStorageService blobStorage,
+        CancellationToken cancellationToken)
+    {
+        var attachment = await dbContext.Attachments.AsNoTracking()
+            .SingleOrDefaultAsync(entity => entity.Id == attachmentId && entity.DeletedAt == null, cancellationToken);
+        if (attachment is null ||
+            !(attachment.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase) ||
+              attachment.ContentType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase)))
+        {
+            return ApiProblems.NotFound(httpContext, "Preview");
+        }
+
+        var accessError = await GetAccessAsync(attachment.TicketId, httpContext, dbContext, cancellationToken);
+        if (accessError is not null)
+        {
+            return ApiProblems.NotFound(httpContext, "Preview");
+        }
+
+        if (attachment.ScanStatus != AttachmentScanStatus.Clean)
+        {
+            return ApiProblems.Conflict(httpContext, "This attachment is not available for preview.", "attachment_not_clean");
+        }
+
+        var stream = await blobStorage.OpenReadAsync(attachment.ContainerName, attachment.BlobName, cancellationToken);
+        httpContext.Response.Headers.ContentSecurityPolicy = "default-src 'none'; img-src 'self' data:; style-src 'none'; sandbox";
+        httpContext.Response.Headers.XContentTypeOptions = "nosniff";
+        return Results.Stream(stream, attachment.ContentType, enableRangeProcessing: true);
     }
 
     private static async Task<IResult> DeleteAsync(

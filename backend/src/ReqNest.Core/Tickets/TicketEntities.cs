@@ -67,7 +67,11 @@ public sealed class Ticket : Entity
 
     public TicketType Type { get; set; } = TicketType.Incident;
 
+    public string TypeKey { get; set; } = nameof(TicketType.Incident);
+
     public TicketPriority Priority { get; set; } = TicketPriority.Normal;
+
+    public string PriorityKey { get; set; } = nameof(TicketPriority.Normal);
 
     public Guid WorkflowStatusId { get; set; }
 
@@ -95,9 +99,23 @@ public sealed class Ticket : Entity
 
     public SlaState SlaState { get; set; }
 
+    public Guid? SlaPolicyId { get; set; }
+
+    public string? SlaPolicyNameSnapshot { get; set; }
+
+    public DateTimeOffset? SlaWarningAt { get; set; }
+
+    public DateTimeOffset? SlaPausedAt { get; set; }
+
+    public int SlaPausedMinutes { get; set; }
+
     public string? ResolutionSummary { get; set; }
 
     public bool IsArchived { get; set; }
+
+    public Guid? ParentTicketId { get; set; }
+
+    public Ticket? ParentTicket { get; set; }
 
     public uint Version { get; set; }
 
