@@ -23,9 +23,9 @@ public sealed class SimpleReportPdfGenerator : IReportPdfGenerator
     private const double TableHeaderHeight = 21;
     private const double TableRowHeight = 17;
 
-    private static readonly (double R, double G, double B) Brand = Rgb(0x6D28D9);
-    private static readonly (double R, double G, double B) BrandDark = Rgb(0x4C1D95);
-    private static readonly (double R, double G, double B) BrandTint = Rgb(0xEDE9FE);
+    private static readonly (double R, double G, double B) Brand = Rgb(0xD0471B);
+    private static readonly (double R, double G, double B) BrandDark = Rgb(0x933112);
+    private static readonly (double R, double G, double B) BrandTint = Rgb(0xFAE0D3);
     private static readonly (double R, double G, double B) TextDark = Rgb(0x1F2430);
     private static readonly (double R, double G, double B) TextMuted = Rgb(0x6B7280);
     private static readonly (double R, double G, double B) RowTint = Rgb(0xF7F7FB);

@@ -88,7 +88,7 @@ export class WorkflowEditorPage {
         key: `STATUS_${index}`,
         label: `Status ${index}`,
         category: 'InProgress',
-        color: '#7c3aed',
+        color: '#d0471b',
         isInitial: false,
         isTerminal: false,
       },
@@ -124,6 +124,7 @@ export class WorkflowEditorPage {
       acceptLabel: this.text('Remove', 'Supprimer'),
       rejectLabel: this.i18n.text('common.cancel'),
       acceptButtonStyleClass: 'p-button-danger',
+      rejectButtonStyleClass: 'p-button-secondary p-button-outlined',
       accept: () => {
         this.draftStatuses = this.draftStatuses.filter((_, itemIndex) => itemIndex !== index);
         this.draftTransitions = this.draftTransitions.filter(
@@ -198,6 +199,7 @@ export class WorkflowEditorPage {
       acceptLabel: this.text('Remove', 'Supprimer'),
       rejectLabel: this.i18n.text('common.cancel'),
       acceptButtonStyleClass: 'p-button-danger',
+      rejectButtonStyleClass: 'p-button-secondary p-button-outlined',
       accept: () => {
         this.draftTransitions = this.draftTransitions.filter(
           (_, itemIndex) => itemIndex !== index,

@@ -6,21 +6,40 @@ import Aura from '@primeuix/themes/aura';
 import { MessageService } from 'primeng/api';
 import { providePrimeNG } from 'primeng/config';
 
-// ClickUp-adjacent violet primary layered over the Aura preset.
+// Brand accent (#D0471B) layered over the Aura preset; accent surfaces always
+// carry white text in both color schemes.
 const ReqNestPreset = definePreset(Aura, {
   semantic: {
     primary: {
-      50: '{violet.50}',
-      100: '{violet.100}',
-      200: '{violet.200}',
-      300: '{violet.300}',
-      400: '{violet.400}',
-      500: '{violet.500}',
-      600: '{violet.600}',
-      700: '{violet.700}',
-      800: '{violet.800}',
-      900: '{violet.900}',
-      950: '{violet.950}',
+      50: '#fdf3ee',
+      100: '#fae0d3',
+      200: '#f5c0a8',
+      300: '#ec9878',
+      400: '#e0704a',
+      500: '#d0471b',
+      600: '#b53d16',
+      700: '#933112',
+      800: '#71250e',
+      900: '#551c0b',
+      950: '#361106',
+    },
+    colorScheme: {
+      light: {
+        primary: {
+          color: '#d0471b',
+          contrastColor: '#ffffff',
+          hoverColor: '{primary.600}',
+          activeColor: '{primary.700}',
+        },
+      },
+      dark: {
+        primary: {
+          color: '#d0471b',
+          contrastColor: '#ffffff',
+          hoverColor: '{primary.400}',
+          activeColor: '{primary.600}',
+        },
+      },
     },
   },
 });

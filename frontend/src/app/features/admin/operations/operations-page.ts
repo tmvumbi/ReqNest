@@ -191,6 +191,7 @@ export class OperationsPage {
       acceptLabel: french ? 'Supprimer' : 'Delete',
       rejectLabel: this.i18n.text('common.cancel'),
       acceptButtonStyleClass: 'p-button-danger',
+      rejectButtonStyleClass: 'p-button-secondary p-button-outlined',
       accept: async () => {
         this.busy.set(true);
         try {

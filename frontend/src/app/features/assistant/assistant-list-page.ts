@@ -161,6 +161,7 @@ export class AssistantListPage {
       acceptLabel: french ? 'Supprimer' : 'Delete',
       rejectLabel: this.i18n.text('common.cancel'),
       acceptButtonStyleClass: 'p-button-danger',
+      rejectButtonStyleClass: 'p-button-secondary p-button-outlined',
       accept: async () => {
         await firstValueFrom(this.api.deleteAssistantConversation(conversation.id));
         await this.load();

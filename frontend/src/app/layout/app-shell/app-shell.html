@@ -5,17 +5,12 @@
   }}</a>
   <aside class="sidebar" aria-label="Primary navigation">
     <a routerLink="/app/dashboard" class="brand" (click)="closeNavigation()">
-      @if (
-        theme.darkActive() ? darkLogoUrl() || lightLogoUrl() : lightLogoUrl() || darkLogoUrl();
-        as logoUrl
-      ) {
-        <img class="brand-logo" [src]="logoUrl" alt="" />
-      } @else {
-        <span class="brand-mark" aria-hidden="true">{{
-          store.activeTenant()?.tenantShortName?.slice(0, 1) || 'R'
-        }}</span>
-      }
-      <span class="brand-name">{{ store.activeTenant()?.tenantName || 'ReqNest' }}</span>
+      <img
+        class="brand-logo"
+        src="/branding/renest-logo-dark.png"
+        alt=""
+      />
+      <span class="brand-name"><span>Re</span><span class="brand-accent">Nest</span></span>
     </a>
     @if (store.session()!.tenants.length > 1) {
       <p-select

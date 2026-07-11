@@ -1,8 +1,10 @@
 :root {
   color-scheme: light;
-  --app-background: #f6f7f9;
+  --app-background: #fdf7f0;
+  --app-topbar: #fcf5eb;
+  --app-sidebar: #28102e;
   --app-surface: #ffffff;
-  --app-sunken: #f1f2f5;
+  --app-sunken: #f6efe6;
   --app-text: #1c2230;
   --app-text-muted: #5d6675;
   --app-text-subtle: #8b93a3;
@@ -31,6 +33,8 @@
 :root.reqnest-dark {
   color-scheme: dark;
   --app-background: #0f1117;
+  --app-topbar: #171a22;
+  --app-sidebar: #28102e;
   --app-surface: #171a22;
   --app-sunken: #12141b;
   --app-text: #e8eaf1;
@@ -54,7 +58,7 @@
 html {
   min-width: 320px;
   height: 100%;
-  font-size: 15px;
+  font-size: 18px;
 }
 body {
   height: 100%;
@@ -236,6 +240,9 @@ button {
 }
 .p-button:not(.p-button-lg):not(.p-button-sm) {
   padding-block: 0.45rem;
+}
+.p-button.p-button-danger {
+  color: #fff;
 }
 .p-inputtext,
 .p-select,

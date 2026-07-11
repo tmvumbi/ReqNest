@@ -1,3 +1,19 @@
+@font-face {
+  font-family: 'Sansation';
+  src: url('/fonts/Sansation/Sansation_Regular.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Sansation';
+  src: url('/fonts/Sansation/Sansation_Bold.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
 :host {
   display: block;
   height: 100dvh;
@@ -17,28 +33,46 @@
   flex-shrink: 0;
   width: 15rem;
   padding: 0.9rem 0.75rem;
-  border-right: 1px solid var(--app-border);
-  background: var(--app-surface);
+  border-right: 1px solid rgb(255 255 255 / 8%);
+  background: var(--app-sidebar);
   overflow-y: auto;
+
+  /* The sidebar keeps its dark plum brand color in both schemes, so its
+     descendants use fixed light-on-plum tokens instead of the scheme ones. */
+  --app-surface: #43284b;
+  --app-sunken: rgb(255 255 255 / 8%);
+  --app-text: #f6f0f8;
+  --app-text-muted: #cfbdd6;
+  --app-text-subtle: #a68fb0;
+  --app-border: rgb(255 255 255 / 14%);
+  --app-border-strong: rgb(255 255 255 / 24%);
 }
 .brand {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.6rem;
   padding: 0.35rem 0.5rem;
   border-radius: 0.6rem;
   color: var(--app-text);
   text-decoration: none;
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 1.3rem;
 }
 .brand:hover {
   background: var(--app-sunken);
+}
+.brand-name,
+.brand-name span {
+  font-family: 'Sansation', sans-serif;
 }
 .brand-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.brand-accent {
+  color: var(--p-primary-color);
 }
 .brand-mark {
   display: grid;
@@ -51,8 +85,9 @@
   background: var(--tenant-accent, var(--p-primary-color));
 }
 .brand-logo {
-  width: 1.9rem;
-  height: 1.9rem;
+  width: 2.15rem;
+  height: 2.15rem;
+  flex: 0 0 auto;
   object-fit: contain;
 }
 .tenant-switcher {
@@ -95,13 +130,14 @@ nav a:hover {
   color: var(--app-text);
   background: var(--app-sunken);
 }
+/* On the plum sidebar the raw accent lacks contrast; use a lighter tint. */
 nav a.active {
-  color: var(--p-primary-color);
-  background: color-mix(in srgb, var(--p-primary-color) 9%, transparent);
+  color: #f7ab88;
+  background: color-mix(in srgb, var(--p-primary-color) 26%, transparent);
   font-weight: 650;
 }
 nav a.active app-icon {
-  color: var(--p-primary-color);
+  color: #f7ab88;
 }
 .nav-badge {
   min-width: 1.3rem;
@@ -162,7 +198,7 @@ nav a.active app-icon {
   min-height: 3.3rem;
   padding: 0.4rem 1.25rem;
   border-bottom: 1px solid var(--app-border);
-  background: var(--app-surface);
+  background: var(--app-topbar);
 }
 .breadcrumbs {
   display: flex;
@@ -254,13 +290,18 @@ nav a.active app-icon {
   place-items: center;
   padding: 0;
   overflow: hidden;
-  border: 0;
+  border: 1px solid color-mix(in srgb, var(--p-primary-color) 45%, white);
   border-radius: 50%;
-  background: color-mix(in srgb, var(--p-primary-color) 15%, transparent);
-  color: var(--p-primary-color);
+  background-color: color-mix(in srgb, var(--p-primary-color) 16%, white);
+  color: var(--app-sidebar);
   font-size: 0.75rem;
   font-weight: 750;
   cursor: pointer;
+}
+:host-context(.reqnest-dark) .avatar-button {
+  border-color: color-mix(in srgb, var(--p-primary-color) 75%, white);
+  background-color: var(--app-sidebar);
+  color: var(--p-primary-color);
 }
 .avatar-button.as-badge {
   cursor: default;

@@ -43,10 +43,12 @@ interface Metric {
             [class.alarming]="metric.alarms && metric.value > 0"
           >
             <span class="metric-icon" [attr.data-tone]="metric.tone">
-              <app-icon [name]="metric.icon" [size]="17" />
+              <app-icon [name]="metric.icon" [size]="22" />
             </span>
-            <span class="metric-value">{{ metric.value }}</span>
-            <span class="metric-label">{{ metric.label }}</span>
+            <span class="metric-copy">
+              <span class="metric-value">{{ metric.value }}</span>
+              <span class="metric-label">{{ metric.label }}</span>
+            </span>
           </a>
         }
       </section>
@@ -142,8 +144,9 @@ interface Metric {
       margin-bottom: 1rem;
     }
     .metric-card {
-      display: grid;
-      gap: 0.1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
       padding: 0.9rem 1rem;
       color: var(--app-text);
       text-decoration: none;
@@ -156,11 +159,11 @@ interface Metric {
     }
     .metric-icon {
       display: grid;
-      width: 1.9rem;
-      height: 1.9rem;
+      width: 2.5rem;
+      height: 2.5rem;
+      flex: 0 0 2.5rem;
       place-items: center;
-      margin-bottom: 0.5rem;
-      border-radius: 0.5rem;
+      border-radius: 0.65rem;
     }
     .metric-icon[data-tone='violet'] {
       color: var(--hue-violet);
@@ -178,7 +181,13 @@ interface Metric {
       color: var(--hue-blue);
       background: color-mix(in srgb, var(--hue-blue) 12%, transparent);
     }
+    .metric-copy {
+      display: grid;
+      min-width: 0;
+      gap: 0.08rem;
+    }
     .metric-value {
+      display: block;
       font-size: 1.55rem;
       font-weight: 750;
       letter-spacing: -0.03em;
@@ -188,6 +197,7 @@ interface Metric {
       color: var(--hue-red);
     }
     .metric-label {
+      display: block;
       color: var(--app-text-muted);
       font-size: 0.78rem;
       font-weight: 550;

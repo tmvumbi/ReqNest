@@ -44,7 +44,7 @@ export class SettingsPage {
     defaultLanguage: ['English' as AppLanguage],
     timeZone: ['UTC', Validators.required],
     defaultTheme: ['System' as ThemePreference],
-    primaryColor: ['#4f46e5', [Validators.required, Validators.pattern(/^#[0-9a-fA-F]{6}$/)]],
+    primaryColor: ['#d0471b', [Validators.required, Validators.pattern(/^#[0-9a-fA-F]{6}$/)]],
     supportContact: [''],
     reportFooterText: [''],
   });
@@ -101,6 +101,7 @@ export class SettingsPage {
       acceptLabel: french ? 'Retirer' : 'Remove',
       rejectLabel: this.i18n.text('common.cancel'),
       acceptButtonStyleClass: 'p-button-danger',
+      rejectButtonStyleClass: 'p-button-secondary p-button-outlined',
       accept: async () => {
         this.logoUploading.set(true);
         try {
