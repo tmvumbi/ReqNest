@@ -54,8 +54,7 @@ public sealed class NotificationService(ReqNestDbContext dbContext) : INotificat
                 ProjectId = message.ProjectId,
                 TicketId = message.TicketId,
                 EventKey = message.EventKey,
-                SummaryEnglish = message.SummaryEnglish,
-                SummaryFrench = message.SummaryFrench,
+                Summary = message.Summary,
                 DeepLink = message.DeepLink,
                 GroupKey = message.GroupKey,
             });
@@ -67,7 +66,7 @@ public sealed class NotificationService(ReqNestDbContext dbContext) : INotificat
                 !existingEmailRecipients.Contains(recipientId))
             {
                 var french = user.PreferredLanguage == AppLanguage.French;
-                var summary = french ? message.SummaryFrench : message.SummaryEnglish;
+                var summary = message.Summary;
                 dbContext.EmailOutboxMessages.Add(new EmailOutboxMessage
                 {
                     TenantId = message.TenantId,

@@ -14,7 +14,7 @@ describe('AuthPage', () => {
       providers: [
         provideHttpClient(),
         provideRouter([]),
-        { provide: ActivatedRoute, useValue: { snapshot: { data: { mode: 'register' } } } },
+        { provide: ActivatedRoute, useValue: { snapshot: { data: { mode: 'login' } } } },
         providePrimeNG({
           theme: { preset: Aura },
           ...(PRIMEUI_LICENSE_KEY ? { license: PRIMEUI_LICENSE_KEY } : {}),
@@ -23,17 +23,13 @@ describe('AuthPage', () => {
     }).compileComponents();
   });
 
-  it('requires company identity, a valid email, and a strong password', () => {
+  it('requires a valid email and a strong password', () => {
     const fixture = TestBed.createComponent(AuthPage);
     const page = fixture.componentInstance;
 
     page.form.setValue({
-      companyName: '',
-      companyShortName: '',
-      displayName: '',
       email: 'invalid',
       password: 'short',
-      language: 'English',
     });
     fixture.detectChanges();
 

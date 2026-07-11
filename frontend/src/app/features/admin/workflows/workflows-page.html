@@ -4,9 +4,9 @@
     <h1>{{ i18n.text('admin.workflowsTitle') }}</h1>
     <p>{{ i18n.text('admin.workflowsSummary') }}</p>
   </div>
-  <button pButton type="button" (click)="openCreate()">
+  <a pButton routerLink="/app/admin/workflows/new">
     {{ i18n.language() === 'French' ? 'Nouveau flux' : 'New workflow' }}
-  </button>
+  </a>
 </header>
 <section class="workflow-grid">
   @for (workflow of workflows(); track workflow.id) {
@@ -34,15 +34,14 @@
         }
       </ol>
       <div class="card-actions">
-        <button
+        <a
           pButton
-          type="button"
           severity="secondary"
           [outlined]="true"
-          (click)="openEdit(workflow)"
+          [routerLink]="['/app/admin/workflows', workflow.id, 'edit']"
         >
           {{ i18n.text('common.edit') }}
-        </button>
+        </a>
         @if (!workflow.projectId) {
           <button
             pButton
@@ -92,248 +91,6 @@
         {{ i18n.text('common.cancel') }}</button
       ><button pButton type="button" (click)="copy()" [loading]="saving()">
         {{ i18n.text('common.create') }}
-      </button>
-    </div>
-  </div>
-</p-dialog>
-
-<p-dialog
-  [visible]="editorVisible()"
-  (visibleChange)="editorVisible.set($event)"
-  [modal]="true"
-  [header]="
-    editing()
-      ? i18n.language() === 'French'
-        ? 'Modifier le flux'
-        : 'Edit workflow'
-      : i18n.language() === 'French'
-        ? 'Nouveau flux'
-        : 'New workflow'
-  "
-  [style]="{ width: 'min(70rem, 96vw)' }"
-  [maximizable]="true"
->
-  <div class="workflow-editor">
-    <div class="field-row">
-      <div class="field">
-        <label for="workflowName">{{ i18n.language() === 'French' ? 'Nom' : 'Name' }}</label
-        ><input pInputText id="workflowName" [(ngModel)]="draftName" />
-      </div>
-      @if (!editing()) {
-        <div class="field">
-          <label for="workflowProject">{{
-            i18n.language() === 'French'
-              ? 'Projet spécifique (facultatif)'
-              : 'Project-specific (optional)'
-          }}</label
-          ><p-select
-            inputId="workflowProject"
-            [(ngModel)]="draftProjectId"
-            [options]="projects()"
-            optionValue="id"
-            [showClear]="true"
-            ><ng-template #selectedItem let-project>{{
-              project ? projectName(project) : i18n.text('common.all')
-            }}</ng-template
-            ><ng-template #item let-project>{{ projectName(project) }}</ng-template></p-select
-          >
-        </div>
-      }
-    </div>
-    <div class="field">
-      <label for="workflowDescription">{{ i18n.text('projects.description') }}</label
-      ><textarea id="workflowDescription" [(ngModel)]="draftDescription" rows="2"></textarea>
-    </div>
-    <div class="section-heading">
-      <h3>{{ i18n.language() === 'French' ? 'Statuts' : 'Statuses' }}</h3>
-      <button
-        pButton
-        type="button"
-        size="small"
-        severity="secondary"
-        [outlined]="true"
-        (click)="addStatus()"
-      >
-        {{ i18n.language() === 'French' ? 'Ajouter un statut' : 'Add status' }}
-      </button>
-    </div>
-    <div class="status-editor-list">
-      @for (status of draftStatuses; track $index; let index = $index) {
-        <fieldset>
-          <legend>{{ status.labelEnglish || status.key }}</legend>
-          <div class="status-fields">
-            <div class="field">
-              <label [for]="'statusKey' + index">{{
-                i18n.language() === 'French' ? 'Clé stable' : 'Stable key'
-              }}</label
-              ><input
-                pInputText
-                [id]="'statusKey' + index"
-                [(ngModel)]="status.key"
-                [disabled]="isExistingKey(status.key)"
-              />
-            </div>
-            <div class="field">
-              <label [for]="'statusEnglish' + index">English</label
-              ><input pInputText [id]="'statusEnglish' + index" [(ngModel)]="status.labelEnglish" />
-            </div>
-            <div class="field">
-              <label [for]="'statusFrench' + index">Français</label
-              ><input pInputText [id]="'statusFrench' + index" [(ngModel)]="status.labelFrench" />
-            </div>
-            <div class="field">
-              <label [for]="'statusCategory' + index">{{
-                i18n.language() === 'French' ? 'Catégorie' : 'Category'
-              }}</label
-              ><p-select
-                [inputId]="'statusCategory' + index"
-                [(ngModel)]="status.category"
-                [options]="categories"
-                ><ng-template #selectedItem let-category>{{ categoryLabel(category) }}</ng-template
-                ><ng-template #item let-category>{{
-                  categoryLabel(category)
-                }}</ng-template></p-select
-              >
-            </div>
-            <div class="field color-field">
-              <label [for]="'statusColor' + index">{{
-                i18n.language() === 'French' ? 'Couleur' : 'Color'
-              }}</label
-              ><input [id]="'statusColor' + index" type="color" [(ngModel)]="status.color" />
-            </div>
-          </div>
-          <div class="status-flags">
-            <label [for]="'statusInitial' + index"
-              ><p-checkbox
-                [inputId]="'statusInitial' + index"
-                [binary]="true"
-                [ngModel]="status.isInitial"
-                (ngModelChange)="$event && setInitial(index)"
-              />{{ i18n.language() === 'French' ? 'Statut initial' : 'Initial status' }}</label
-            ><label [for]="'statusTerminal' + index"
-              ><p-checkbox
-                [inputId]="'statusTerminal' + index"
-                [binary]="true"
-                [(ngModel)]="status.isTerminal"
-              />{{ i18n.language() === 'French' ? 'Terminal' : 'Terminal' }}</label
-            ><button
-              pButton
-              type="button"
-              size="small"
-              severity="danger"
-              [text]="true"
-              [disabled]="draftStatuses.length <= 2"
-              (click)="removeStatus(index)"
-            >
-              {{ i18n.language() === 'French' ? 'Retirer' : 'Remove' }}
-            </button>
-          </div>
-        </fieldset>
-      }
-    </div>
-    @if (removedStatuses().length) {
-      <section class="mapping-panel">
-        <h3>
-          {{
-            i18n.language() === 'French'
-              ? 'Correspondance des statuts supprimés'
-              : 'Removed status mapping'
-          }}
-        </h3>
-        <p>
-          {{
-            i18n.language() === 'French'
-              ? 'Choisissez où déplacer les tickets existants avant l’enregistrement.'
-              : 'Choose where existing tickets move before saving.'
-          }}
-        </p>
-        @for (removed of removedStatuses(); track removed.id) {
-          <div class="mapping-row">
-            <strong>{{ label(removed) }}</strong
-            ><span aria-hidden="true">→</span
-            ><p-select
-              [(ngModel)]="statusMappings[removed.key]"
-              [options]="draftStatuses"
-              optionLabel="labelEnglish"
-              optionValue="key"
-            />
-          </div>
-        }
-      </section>
-    }
-    <div class="section-heading">
-      <h3>{{ i18n.language() === 'French' ? 'Transitions autorisées' : 'Allowed transitions' }}</h3>
-      <button
-        pButton
-        type="button"
-        size="small"
-        severity="secondary"
-        [outlined]="true"
-        (click)="addTransition()"
-      >
-        {{ i18n.language() === 'French' ? 'Ajouter une transition' : 'Add transition' }}
-      </button>
-    </div>
-    <div class="transition-editor-list">
-      @for (transition of draftTransitions; track $index; let index = $index) {
-        <div class="transition-row">
-          <p-select
-            [(ngModel)]="transition.fromKey"
-            [options]="draftStatuses"
-            optionLabel="labelEnglish"
-            optionValue="key"
-          /><span aria-hidden="true">→</span
-          ><p-select
-            [(ngModel)]="transition.toKey"
-            [options]="draftStatuses"
-            optionLabel="labelEnglish"
-            optionValue="key"
-          /><input
-            pInputText
-            [(ngModel)]="transition.nameEnglish"
-            [placeholder]="
-              i18n.language() === 'French' ? 'Nom anglais (facultatif)' : 'English name (optional)'
-            "
-          /><input
-            pInputText
-            [(ngModel)]="transition.nameFrench"
-            placeholder="Nom français (facultatif)"
-          /><label [for]="'transitionComment' + index"
-            ><p-checkbox
-              [inputId]="'transitionComment' + index"
-              [binary]="true"
-              [(ngModel)]="transition.commentRequired"
-            />{{ i18n.language() === 'French' ? 'Commentaire requis' : 'Comment required' }}</label
-          ><button
-            pButton
-            type="button"
-            size="small"
-            severity="danger"
-            [text]="true"
-            (click)="removeTransition(index)"
-          >
-            {{ i18n.language() === 'French' ? 'Retirer' : 'Remove' }}
-          </button>
-        </div>
-      }
-    </div>
-    <div class="dialog-actions">
-      <button
-        pButton
-        type="button"
-        severity="secondary"
-        [text]="true"
-        (click)="editorVisible.set(false)"
-      >
-        {{ i18n.text('common.cancel') }}</button
-      ><button
-        pButton
-        type="button"
-        [disabled]="!validDraft()"
-        [loading]="saving()"
-        (click)="saveWorkflow()"
-      >
-        {{ i18n.text('common.save') }}
       </button>
     </div>
   </div>

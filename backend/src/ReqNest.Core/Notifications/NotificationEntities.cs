@@ -41,9 +41,8 @@ public sealed class Notification : Entity
 
     public string EventKey { get; set; } = string.Empty;
 
-    public string SummaryEnglish { get; set; } = string.Empty;
+    public string Summary { get; set; } = string.Empty;
 
-    public string SummaryFrench { get; set; } = string.Empty;
 
     public string DeepLink { get; set; } = string.Empty;
 

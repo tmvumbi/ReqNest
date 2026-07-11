@@ -29,14 +29,14 @@ public sealed class PhaseThreeExternalServiceTests(ReqNestApiFactory factory)
         var tenantId = session.Tenants.Single().TenantId;
         var project = await ReadAsync<ProjectResponse>(await adminClient.PostAsJsonAsync(
             "/api/projects",
-            new CreateProjectRequest($"X{suffix[..5]}", "Customer support", "Soutien client", "External service", null, TicketPriority.Normal, null),
+            new CreateProjectRequest($"X{suffix[..5]}", "Customer support", "External service", null, TicketPriority.Normal, null),
             CancellationToken));
 
-        (await adminClient.PutAsJsonAsync("/api/portal/settings", new UpdatePortalSettingsRequest(true, "Welcome", "Bienvenue"), CancellationToken)).EnsureSuccessStatusCode();
+        (await adminClient.PutAsJsonAsync("/api/portal/settings", new UpdatePortalSettingsRequest(true, "Welcome"), CancellationToken)).EnsureSuccessStatusCode();
         (await adminClient.PutAsJsonAsync($"/api/portal/projects/{project.Id}", new UpdatePortalProjectRequest(true), CancellationToken)).EnsureSuccessStatusCode();
         var publicClient = factory.CreateClient();
         var portal = await ReadAsync<PublicPortalResponse>(await publicClient.GetAsync($"/api/public/portal/{tenantId}", CancellationToken));
-        Assert.Equal("Bienvenue", portal.IntroductionFrench);
+        Assert.Equal("Welcome", portal.Introduction);
         Assert.Single(portal.Projects);
         var created = await ReadAsync<RequesterTicketCreatedResponse>(await publicClient.PostAsJsonAsync(
             $"/api/public/portal/{tenantId}/tickets",
@@ -50,7 +50,7 @@ public sealed class PhaseThreeExternalServiceTests(ReqNestApiFactory factory)
 
         var article = await ReadAsync<KnowledgeArticleResponse>(await adminClient.PostAsJsonAsync(
             "/api/knowledge",
-            new UpsertKnowledgeArticleRequest(null, $"reset-{suffix}", "Reset access", "Réinitialiser l'accès", "<p>Follow the steps.</p>", "<p>Suivez les étapes.</p>", KnowledgeArticleVisibility.Requesters),
+            new UpsertKnowledgeArticleRequest(null, $"reset-{suffix}", "Reset access", "<p>Follow the steps.</p>", KnowledgeArticleVisibility.Requesters),
             CancellationToken));
         (await adminClient.PostAsJsonAsync($"/api/knowledge/{article.Id}/status", new SetKnowledgeStatusRequest(KnowledgeArticleStatus.Published), CancellationToken)).EnsureSuccessStatusCode();
         var publicArticles = await ReadAsync<IReadOnlyCollection<KnowledgeArticleResponse>>(await publicClient.GetAsync($"/api/public/portal/{tenantId}/knowledge?search=reset", CancellationToken));

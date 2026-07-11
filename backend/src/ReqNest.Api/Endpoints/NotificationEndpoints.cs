@@ -80,8 +80,7 @@ public static class NotificationEndpoints
                 entity.ActorUserId,
                 entity.ProjectId,
                 entity.TicketId,
-                entity.SummaryEnglish,
-                entity.SummaryFrench,
+                entity.Summary,
                 entity.DeepLink,
                 entity.ReadAt,
                 entity.CreatedAt))
@@ -202,8 +201,7 @@ public sealed record NotificationResponse(
     Guid? ActorUserId,
     Guid? ProjectId,
     Guid? TicketId,
-    string SummaryEnglish,
-    string SummaryFrench,
+    string Summary,
     string DeepLink,
     DateTimeOffset? ReadAt,
     DateTimeOffset CreatedAt);

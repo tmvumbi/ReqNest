@@ -22,6 +22,112 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("ReqNest.Core.Assistant.AiChatMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("content");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("conversation_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsVoice")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_voice");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("role");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("ToolCallId")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("tool_call_id");
+
+                    b.Property<string>("ToolCallsJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("tool_calls_json");
+
+                    b.Property<string>("ToolName")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("tool_name");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ai_chat_messages");
+
+                    b.HasIndex("ConversationId", "CreatedAt")
+                        .HasDatabaseName("ix_ai_chat_messages_conversation_id_created_at");
+
+                    b.ToTable("ai_chat_messages", (string)null);
+                });
+
+            modelBuilder.Entity("ReqNest.Core.Assistant.AiConversation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset>("LastMessageAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_message_at");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ai_conversations");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_ai_conversations_user_id");
+
+                    b.HasIndex("TenantId", "UserId", "LastMessageAt")
+                        .HasDatabaseName("ix_ai_conversations_tenant_id_user_id_last_message_at");
+
+                    b.ToTable("ai_conversations", (string)null);
+                });
+
             modelBuilder.Entity("ReqNest.Core.Auditing.AuditEvent", b =>
                 {
                     b.Property<Guid>("Id")
@@ -112,17 +218,11 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("kind");
 
-                    b.Property<string>("LabelEnglish")
+                    b.Property<string>("Label")
                         .IsRequired()
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)")
-                        .HasColumnName("label_english");
-
-                    b.Property<string>("LabelFrench")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("character varying(120)")
-                        .HasColumnName("label_french");
+                        .HasColumnName("label");
 
                     b.Property<string>("OptionsJson")
                         .IsRequired()
@@ -133,9 +233,10 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("order");
 
-                    b.Property<Guid?>("ProjectId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("project_id");
+                    b.PrimitiveCollection<Guid[]>("ProjectIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("project_ids");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
@@ -148,8 +249,8 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_custom_field_definitions");
 
-                    b.HasIndex("TenantId", "ProjectId", "Key")
-                        .HasDatabaseName("ix_custom_field_definitions_tenant_id_project_id_key");
+                    b.HasIndex("TenantId", "Key")
+                        .HasDatabaseName("ix_custom_field_definitions_tenant_id_key");
 
                     b.ToTable("custom_field_definitions", (string)null);
                 });
@@ -235,9 +336,10 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                         .HasColumnType("text[]")
                         .HasColumnName("pause_status_keys");
 
-                    b.Property<Guid?>("ProjectId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("project_id");
+                    b.PrimitiveCollection<Guid[]>("ProjectIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("project_ids");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
@@ -264,12 +366,12 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_sla_policies");
 
+                    b.HasIndex("TenantId", "IsActive")
+                        .HasDatabaseName("ix_sla_policies_tenant_id_is_active");
+
                     b.HasIndex("TenantId", "Name")
                         .IsUnique()
                         .HasDatabaseName("ix_sla_policies_tenant_id_name");
-
-                    b.HasIndex("TenantId", "ProjectId", "IsActive")
-                        .HasDatabaseName("ix_sla_policies_tenant_id_project_id_is_active");
 
                     b.ToTable("sla_policies", (string)null);
                 });
@@ -390,17 +492,11 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(80)")
                         .HasColumnName("key");
 
-                    b.Property<string>("LabelEnglish")
+                    b.Property<string>("Label")
                         .IsRequired()
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)")
-                        .HasColumnName("label_english");
-
-                    b.Property<string>("LabelFrench")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("character varying(120)")
-                        .HasColumnName("label_french");
+                        .HasColumnName("label");
 
                     b.Property<int>("Order")
                         .HasColumnType("integer")
@@ -452,17 +548,11 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(80)")
                         .HasColumnName("key");
 
-                    b.Property<string>("LabelEnglish")
+                    b.Property<string>("Label")
                         .IsRequired()
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)")
-                        .HasColumnName("label_english");
-
-                    b.Property<string>("LabelFrench")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("character varying(120)")
-                        .HasColumnName("label_french");
+                        .HasColumnName("label");
 
                     b.Property<int>("Order")
                         .HasColumnType("integer")
@@ -785,6 +875,14 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
+
+                    b.Property<string>("AvatarBlobName")
+                        .HasColumnType("text")
+                        .HasColumnName("avatar_blob_name");
+
+                    b.Property<string>("AvatarContentType")
+                        .HasColumnType("text")
+                        .HasColumnName("avatar_content_type");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -1408,17 +1506,11 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("author_user_id");
 
-                    b.Property<string>("BodyEnglish")
+                    b.Property<string>("Body")
                         .IsRequired()
                         .HasMaxLength(100000)
                         .HasColumnType("character varying(100000)")
-                        .HasColumnName("body_english");
-
-                    b.Property<string>("BodyFrench")
-                        .IsRequired()
-                        .HasMaxLength(100000)
-                        .HasColumnType("character varying(100000)")
-                        .HasColumnName("body_french");
+                        .HasColumnName("body");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -1452,17 +1544,11 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("tenant_id");
 
-                    b.Property<string>("TitleEnglish")
+                    b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)")
-                        .HasColumnName("title_english");
-
-                    b.Property<string>("TitleFrench")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)")
-                        .HasColumnName("title_french");
+                        .HasColumnName("title");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -2077,17 +2163,11 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("recipient_user_id");
 
-                    b.Property<string>("SummaryEnglish")
+                    b.Property<string>("Summary")
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")
-                        .HasColumnName("summary_english");
-
-                    b.Property<string>("SummaryFrench")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("summary_french");
+                        .HasColumnName("summary");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
@@ -2374,17 +2454,11 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(12)")
                         .HasColumnName("key");
 
-                    b.Property<string>("NameEnglish")
+                    b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
-                        .HasColumnName("name_english");
-
-                    b.Property<string>("NameFrench")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("name_french");
+                        .HasColumnName("name");
 
                     b.Property<long>("NextTicketNumber")
                         .HasColumnType("bigint")
@@ -2503,13 +2577,9 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("requester_portal_enabled");
 
-                    b.Property<string>("RequesterPortalIntroductionEnglish")
+                    b.Property<string>("RequesterPortalIntroduction")
                         .HasColumnType("text")
-                        .HasColumnName("requester_portal_introduction_english");
-
-                    b.Property<string>("RequesterPortalIntroductionFrench")
-                        .HasColumnType("text")
-                        .HasColumnName("requester_portal_introduction_french");
+                        .HasColumnName("requester_portal_introduction");
 
                     b.Property<string>("ShortName")
                         .IsRequired()
@@ -3245,17 +3315,11 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(40)")
                         .HasColumnName("key");
 
-                    b.Property<string>("LabelEnglish")
+                    b.Property<string>("Label")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
-                        .HasColumnName("label_english");
-
-                    b.Property<string>("LabelFrench")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("label_french");
+                        .HasColumnName("label");
 
                     b.Property<int>("Order")
                         .HasColumnType("integer")
@@ -3306,15 +3370,10 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("from_status_id");
 
-                    b.Property<string>("NameEnglish")
+                    b.Property<string>("Name")
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)")
-                        .HasColumnName("name_english");
-
-                    b.Property<string>("NameFrench")
-                        .HasMaxLength(120)
-                        .HasColumnType("character varying(120)")
-                        .HasColumnName("name_french");
+                        .HasColumnName("name");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
@@ -3346,6 +3405,28 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_workflow_transitions_workflow_id_from_status_id_to_status_id");
 
                     b.ToTable("workflow_transitions", (string)null);
+                });
+
+            modelBuilder.Entity("ReqNest.Core.Assistant.AiChatMessage", b =>
+                {
+                    b.HasOne("ReqNest.Core.Assistant.AiConversation", "Conversation")
+                        .WithMany("Messages")
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_ai_chat_messages_ai_conversations_conversation_id");
+
+                    b.Navigation("Conversation");
+                });
+
+            modelBuilder.Entity("ReqNest.Core.Assistant.AiConversation", b =>
+                {
+                    b.HasOne("ReqNest.Core.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_ai_conversations_users_user_id");
                 });
 
             modelBuilder.Entity("ReqNest.Core.Configuration.SlaHoliday", b =>
@@ -3885,6 +3966,11 @@ namespace ReqNest.Infrastructure.Persistence.Migrations
                     b.Navigation("ToStatus");
 
                     b.Navigation("Workflow");
+                });
+
+            modelBuilder.Entity("ReqNest.Core.Assistant.AiConversation", b =>
+                {
+                    b.Navigation("Messages");
                 });
 
             modelBuilder.Entity("ReqNest.Core.Configuration.SlaPolicy", b =>

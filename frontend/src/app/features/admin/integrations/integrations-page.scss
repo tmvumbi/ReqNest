@@ -13,6 +13,43 @@
   max-width: 52rem;
   color: var(--app-text-muted);
 }
+.section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.section-heading .eyebrow,
+.section-heading h2 {
+  margin: 0;
+}
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--app-text);
+  font-size: 0.85rem;
+  font-weight: 550;
+  cursor: pointer;
+}
+.field {
+  display: grid;
+  gap: 0.45rem;
+}
+.field > label,
+.field-label {
+  color: var(--app-text-muted);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+.field textarea {
+  width: 100%;
+  resize: vertical;
+}
+.portal-link {
+  color: var(--p-primary-color);
+  font-size: 0.85rem;
+}
 .form,
 .form label,
 .split label {
@@ -21,6 +58,22 @@
 }
 .form {
   gap: 0.8rem;
+}
+.form > button,
+.content-panel > button {
+  justify-self: start;
+}
+.form label,
+.split label {
+  color: var(--app-text-muted);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+.checks label,
+.project-toggles label {
+  color: var(--app-text);
+  font-size: 0.85rem;
+  font-weight: 550;
 }
 .split {
   display: grid;

@@ -1,10 +1,10 @@
-<header class="page-heading compact">
-  <div>
-    <p class="eyebrow">{{ i18n.text('nav.tickets') }}</p>
-    <h1>{{ i18n.text('tickets.new') }}</h1>
-    <p>{{ i18n.text('tickets.summary') }}</p>
-  </div>
-</header>
+<div class="create-wrap">
+  <header class="page-heading compact">
+    <div>
+      <h1>{{ i18n.text('tickets.new') }}</h1>
+      <p>{{ i18n.text('tickets.createSummary') }}</p>
+    </div>
+  </header>
 <form [formGroup]="form" (ngSubmit)="create()" class="content-panel ticket-form">
   <div class="field">
     <label for="ticketProject">{{ i18n.text('common.project') }}</label
@@ -13,7 +13,7 @@
       formControlName="projectId"
       [options]="projects()"
       optionValue="id"
-      [optionLabel]="i18n.language() === 'French' ? 'nameFrench' : 'nameEnglish'"
+      [optionLabel]="'name'"
       (onChange)="loadSchema($event.value)"
       ><ng-template #selectedItem let-project>{{ project ? projectName(project) : '' }}</ng-template
       ><ng-template #item let-project>{{ projectName(project) }}</ng-template></p-select
@@ -103,7 +103,7 @@
         formControlName="typeKey"
         [options]="activeDefinitions(schema()?.types ?? [], form.controls.projectId.value)"
         optionValue="key"
-        [optionLabel]="i18n.language() === 'French' ? 'labelFrench' : 'labelEnglish'"
+        [optionLabel]="'label'"
       >
         <ng-template #selectedItem let-option>{{
           option ? definitionLabel(option) : ''
@@ -118,7 +118,7 @@
         formControlName="priorityKey"
         [options]="activeDefinitions(schema()?.priorities ?? [], form.controls.projectId.value)"
         optionValue="key"
-        [optionLabel]="i18n.language() === 'French' ? 'labelFrench' : 'labelEnglish'"
+        [optionLabel]="'label'"
       >
         <ng-template #selectedItem let-option>{{
           option ? definitionLabel(option) : ''
@@ -197,3 +197,4 @@
     </button>
   </div>
 </form>
+</div>

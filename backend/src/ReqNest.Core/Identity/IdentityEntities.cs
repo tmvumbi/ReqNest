@@ -55,6 +55,10 @@ public sealed class User : Entity
 
     public ThemePreference ThemePreference { get; set; } = ThemePreference.System;
 
+    public string? AvatarBlobName { get; set; }
+
+    public string? AvatarContentType { get; set; }
+
     public DateTimeOffset? LastSignedInAt { get; set; }
 
     public int FailedSignInCount { get; set; }

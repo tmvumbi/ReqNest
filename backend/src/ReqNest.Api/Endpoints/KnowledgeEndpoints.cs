@@ -257,7 +257,7 @@ public static partial class KnowledgeEndpoints
             query = query.Where(entity => EF.Functions.ILike(entity.SearchText, pattern));
         }
 
-        var articles = await query.OrderBy(entity => entity.TitleEnglish).Take(100)
+        var articles = await query.OrderBy(entity => entity.Title).Take(100)
             .Select(entity => ToResponse(entity)).ToArrayAsync(cancellationToken);
         return TypedResults.Ok<IReadOnlyCollection<KnowledgeArticleResponse>>(articles);
     }
@@ -283,32 +283,28 @@ public static partial class KnowledgeEndpoints
         IRichContentSanitizer sanitizer,
         HttpContext context)
     {
-        var english = sanitizer.Sanitize(request.BodyEnglish);
-        var french = sanitizer.Sanitize(request.BodyFrench);
+        var english = sanitizer.Sanitize(request.Body);
         var slug = SlugRegex().Replace(request.Slug.Trim().ToLowerInvariant(), "-").Trim('-');
-        if (slug.Length is < 2 or > 180 || string.IsNullOrWhiteSpace(request.TitleEnglish) ||
-            string.IsNullOrWhiteSpace(request.TitleFrench) || string.IsNullOrWhiteSpace(english.PlainText) ||
-            string.IsNullOrWhiteSpace(french.PlainText))
+        if (slug.Length is < 2 or > 180 || string.IsNullOrWhiteSpace(request.Title) ||
+            string.IsNullOrWhiteSpace(english.PlainText))
         {
-            return ApiProblems.Validation(context, "A valid slug and complete English/French article are required.");
+            return ApiProblems.Validation(context, "A valid slug and a complete article are required.");
         }
 
         article.ProjectId = request.ProjectId;
         article.Slug = slug;
-        article.TitleEnglish = request.TitleEnglish.Trim()[..Math.Min(300, request.TitleEnglish.Trim().Length)];
-        article.TitleFrench = request.TitleFrench.Trim()[..Math.Min(300, request.TitleFrench.Trim().Length)];
-        article.BodyEnglish = english.Html;
-        article.BodyFrench = french.Html;
-        article.SearchText = $"{article.TitleEnglish} {article.TitleFrench} {english.PlainText} {french.PlainText}"[..Math.Min(
+        article.Title = request.Title.Trim()[..Math.Min(300, request.Title.Trim().Length)];
+        article.Body = english.Html;
+        article.SearchText = $"{article.Title} {english.PlainText}"[..Math.Min(
             20_000,
-            article.TitleEnglish.Length + article.TitleFrench.Length + english.PlainText.Length + french.PlainText.Length + 3)];
+            article.Title.Length + english.PlainText.Length + 1)];
         article.Visibility = request.Visibility;
         return null;
     }
 
     private static KnowledgeArticleResponse ToResponse(KnowledgeArticle entity) => new(
-        entity.Id, entity.ProjectId, entity.Slug, entity.TitleEnglish, entity.TitleFrench,
-        entity.BodyEnglish, entity.BodyFrench, entity.Status, entity.Visibility,
+        entity.Id, entity.ProjectId, entity.Slug, entity.Title,
+        entity.Body, entity.Status, entity.Visibility,
         entity.PublishedAt, entity.UpdatedAt);
 
     private static void AddAudit(ReqNestDbContext dbContext, HttpContext context, Guid tenantId, string action, Guid id) =>
@@ -330,10 +326,8 @@ public static partial class KnowledgeEndpoints
 public sealed record UpsertKnowledgeArticleRequest(
     Guid? ProjectId,
     string Slug,
-    string TitleEnglish,
-    string TitleFrench,
-    string BodyEnglish,
-    string BodyFrench,
+    string Title,
+    string Body,
     KnowledgeArticleVisibility Visibility);
 
 public sealed record SetKnowledgeStatusRequest(KnowledgeArticleStatus Status);
@@ -342,10 +336,8 @@ public sealed record KnowledgeArticleResponse(
     Guid Id,
     Guid? ProjectId,
     string Slug,
-    string TitleEnglish,
-    string TitleFrench,
-    string BodyEnglish,
-    string BodyFrench,
+    string Title,
+    string Body,
     KnowledgeArticleStatus Status,
     KnowledgeArticleVisibility Visibility,
     DateTimeOffset? PublishedAt,

@@ -11,15 +11,19 @@ using ReqNest.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Local-only secrets (AI keys, etc.) live outside the committed appsettings files.
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 builder.Services.AddDataProtection();
 builder.Services.AddHttpClient();
+builder.Services.AddSingleton<ReqNest.Api.Assistant.OpenRouterClient>();
+builder.Services.AddSingleton<ReqNest.Api.Assistant.AssistantToolService>();
 builder.Services.AddInfrastructure(builder.Configuration);
 if (builder.Configuration.GetValue<bool>("Reports:RunScheduleWorker"))
 {
-    builder.Services.AddHostedService<ReportScheduleWorker>();
-}
+    }
 if (builder.Configuration.GetValue<bool>("Integrations:RunWebhookWorker"))
 {
     builder.Services.AddHostedService<WebhookDeliveryWorker>();
@@ -139,6 +143,7 @@ app.MapIntegrationAdministrationEndpoints();
 app.MapInboundEmailEndpoints();
 app.MapSsoAuthenticationEndpoints();
 app.MapAiAssistanceEndpoints();
+app.MapAssistantEndpoints();
 
 app.Run();
 

@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
+import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { InputTextModule } from 'primeng/inputtext';
@@ -40,6 +41,7 @@ import { I18nService } from '../../../core/i18n/i18n.service';
 })
 export class IntegrationsPage {
   private readonly api = inject(ApiClient);
+  private readonly messages = inject(MessageService);
   readonly i18n = inject(I18nService);
   readonly projects = signal<Project[]>([]);
   readonly portal = signal<PortalSettings | null>(null);
@@ -49,8 +51,6 @@ export class IntegrationsPage {
   readonly deliveries = signal<WebhookDeliveryItem[]>([]);
   readonly connections = signal<IntegrationConnectionItem[]>([]);
   readonly busy = signal(false);
-  readonly error = signal('');
-  readonly success = signal('');
   readonly oneTimeSecret = signal('');
   tokenName = '';
   tokenScopes: string[] = ['ticket.maintain'];
@@ -67,14 +67,6 @@ export class IntegrationsPage {
   connectionName = '';
   connectionUrl = '';
   connectionBearer = '';
-  sso = {
-    authority: '',
-    clientId: '',
-    clientSecret: '',
-    domains: '',
-    isEnabled: false,
-    requireSso: false,
-  };
   ai = {
     isEnabled: false,
     provider: 'ReqNestSafeDraft',
@@ -117,8 +109,7 @@ export class IntegrationsPage {
       await firstValueFrom(
         this.api.updatePortalSettings({
           isEnabled: p.isEnabled,
-          introductionEnglish: p.introductionEnglish ?? '',
-          introductionFrench: p.introductionFrench ?? '',
+          introduction: p.introduction ?? '',
         }),
       );
       for (const project of p.projects)
@@ -203,28 +194,6 @@ export class IntegrationsPage {
       this.connections.set(await firstValueFrom(this.api.connections()));
     });
   }
-  async saveSso(): Promise<void> {
-    await this.run(async () => {
-      await firstValueFrom(
-        this.api.updateSso({
-          authority: this.sso.authority,
-          clientId: this.sso.clientId,
-          clientSecret: this.sso.clientSecret || null,
-          allowedEmailDomains: this.sso.domains
-            .split(',')
-            .map((x) => x.trim())
-            .filter(Boolean),
-          isEnabled: this.sso.isEnabled,
-          requireSso: this.sso.requireSso,
-        }),
-      );
-    });
-  }
-  async testSso(): Promise<void> {
-    await this.run(async () => {
-      await firstValueFrom(this.api.testSso());
-    });
-  }
   async saveAi(): Promise<void> {
     await this.run(async () => {
       await firstValueFrom(this.api.updateAi(this.ai));
@@ -232,7 +201,7 @@ export class IntegrationsPage {
   }
   private async load(): Promise<void> {
     try {
-      const [projects, portal, tokens, channels, webhooks, deliveries, connections, sso, ai] =
+      const [projects, portal, tokens, channels, webhooks, deliveries, connections, ai] =
         await Promise.all([
           firstValueFrom(this.api.projects()),
           firstValueFrom(this.api.portalSettings()),
@@ -241,7 +210,6 @@ export class IntegrationsPage {
           firstValueFrom(this.api.webhooks()),
           firstValueFrom(this.api.webhookDeliveries()),
           firstValueFrom(this.api.connections()),
-          firstValueFrom(this.api.ssoConfiguration()),
           firstValueFrom(this.api.aiConfiguration()),
         ]);
       this.projects.set(projects);
@@ -252,14 +220,6 @@ export class IntegrationsPage {
       this.deliveries.set(deliveries);
       this.connections.set(connections);
       this.channelProject = projects[0]?.id ?? '';
-      this.sso = {
-        authority: sso.authority,
-        clientId: sso.clientId,
-        clientSecret: '',
-        domains: sso.allowedEmailDomains.join(', '),
-        isEnabled: sso.isEnabled,
-        requireSso: sso.requireSso,
-      };
       this.ai = {
         isEnabled: ai.isEnabled,
         provider: ai.provider,
@@ -270,7 +230,8 @@ export class IntegrationsPage {
         providerDoesNotTrain: ai.providerDoesNotTrain,
       };
     } catch {
-      this.error.set(
+      this.notify(
+        'error',
         this.text(
           'Could not load integration settings.',
           "Impossible de charger les paramètres d'intégration.",
@@ -280,13 +241,12 @@ export class IntegrationsPage {
   }
   private async run(action: () => Promise<void>): Promise<void> {
     this.busy.set(true);
-    this.error.set('');
-    this.success.set('');
     try {
       await action();
-      this.success.set(this.text('Changes saved.', 'Modifications enregistrées.'));
+      this.notify('success', this.text('Changes saved.', 'Modifications enregistrées.'));
     } catch {
-      this.error.set(
+      this.notify(
+        'error',
         this.text(
           'The operation could not be completed.',
           "L'opération n'a pas pu être effectuée.",
@@ -295,5 +255,9 @@ export class IntegrationsPage {
     } finally {
       this.busy.set(false);
     }
+  }
+
+  private notify(severity: 'success' | 'error', summary: string): void {
+    this.messages.add({ severity, summary, life: severity === 'success' ? 4000 : 6000 });
   }
 }

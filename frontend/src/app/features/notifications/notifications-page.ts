@@ -4,7 +4,6 @@ import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
-import { TagModule } from 'primeng/tag';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { ApiClient } from '../../core/api/api-client';
 import { AppNotification, Project } from '../../core/api/api-models';
@@ -18,7 +17,6 @@ import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
     FormsModule,
     ButtonModule,
     SelectModule,
-    TagModule,
     ToggleSwitchModule,
   ],
   template: `
@@ -32,6 +30,7 @@ import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
         {{ i18n.text('notifications.markAll') }}
       </button>
     </header>
+    <div class="notifications-columns">
     <section class="content-panel">
       <div class="notification-filters">
         <label class="toggle-label" for="unreadOnly"
@@ -41,32 +40,30 @@ import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
             (ngModelChange)="load()"
           />{{ i18n.text('notifications.unreadOnly') }}</label
         >
-        <div class="field">
-          <label for="notificationProject">{{ i18n.text('common.project') }}</label
-          ><p-select
-            inputId="notificationProject"
-            [(ngModel)]="selectedProject"
-            [options]="projects()"
-            [optionLabel]="i18n.language() === 'French' ? 'nameFrench' : 'nameEnglish'"
-            optionValue="id"
-            [showClear]="true"
-            (onChange)="load()"
-          />
-        </div>
-        <div class="field">
-          <label for="notificationType">{{ i18n.text('tickets.type') }}</label
-          ><p-select
-            inputId="notificationType"
-            [(ngModel)]="selectedType"
-            [options]="types"
-            [showClear]="true"
-            (onChange)="load()"
-            ><ng-template #selectedItem let-option>{{ i18n.notificationType(option) }}</ng-template>
-            <ng-template #item let-option>{{
-              i18n.notificationType(option)
-            }}</ng-template></p-select
-          >
-        </div>
+        <p-select
+          inputId="notificationProject"
+          [(ngModel)]="selectedProject"
+          [options]="projects()"
+          [optionLabel]="'name'"
+          optionValue="id"
+          [showClear]="true"
+          [placeholder]="i18n.text('common.project') + ' · ' + i18n.text('common.all')"
+          [ariaLabel]="i18n.text('common.project')"
+          (onChange)="load()"
+        />
+        <p-select
+          inputId="notificationType"
+          [(ngModel)]="selectedType"
+          [options]="types"
+          [showClear]="true"
+          [placeholder]="i18n.text('tickets.type') + ' · ' + i18n.text('common.all')"
+          [ariaLabel]="i18n.text('tickets.type')"
+          (onChange)="load()"
+          ><ng-template #selectedItem let-option>{{ i18n.notificationType(option) }}</ng-template>
+          <ng-template #item let-option>{{
+            i18n.notificationType(option)
+          }}</ng-template></p-select
+        >
       </div>
       <div class="notification-list">
         @for (notification of notifications(); track notification.id) {
@@ -77,7 +74,7 @@ import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
               ><small>{{ notification.createdAt | localizedDate: 'medium' }}</small></span
             >
             @if (!notification.readAt) {
-              <p-tag [value]="i18n.language() === 'French' ? 'Nouveau' : 'New'" severity="info" />
+              <span class="unread-dot" aria-hidden="true"></span>
             }
           </button>
         } @empty {
@@ -135,77 +132,122 @@ import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
         {{ i18n.text('common.save') }}
       </button>
     </section>
+    </div>
   `,
   styles: `
+    .notifications-columns {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 19rem;
+      gap: 0.85rem;
+      align-items: start;
+    }
     .toggle-label,
     .preferences label {
       display: flex;
       gap: 0.65rem;
       align-items: center;
-      font-weight: 700;
+      font-size: 0.85rem;
+      font-weight: 550;
     }
     .notification-filters {
-      display: grid;
-      grid-template-columns: auto 1fr 1fr;
-      gap: 1rem;
-      align-items: end;
-      margin-bottom: 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      align-items: center;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--app-border);
+    }
+    .notification-filters p-select {
+      min-width: 11rem;
     }
     .field {
       display: grid;
-      gap: 0.4rem;
+      gap: 0.35rem;
     }
     .field > label {
-      font-weight: 700;
+      color: var(--app-text-muted);
+      font-size: 0.76rem;
+      font-weight: 650;
     }
     .preferences {
       display: grid;
-      gap: 1rem;
-      margin-top: 1rem;
+      gap: 0.85rem;
+    }
+    .preferences h2 {
+      margin: 0 0 0.3rem;
+      font-size: 0.95rem;
+      font-weight: 650;
+    }
+    .preferences p {
+      margin: 0;
+      color: var(--app-text-muted);
+      font-size: 0.78rem;
+      line-height: 1.5;
     }
     .preferences button {
-      justify-self: end;
+      justify-self: stretch;
     }
     .notification-list {
       display: grid;
     }
     .notification-list > button {
       display: grid;
-      grid-template-columns: 2.5rem 1fr auto;
-      gap: 1rem;
+      grid-template-columns: 2.1rem 1fr auto;
+      gap: 0.75rem;
       align-items: center;
       width: 100%;
-      padding: 1rem 0.5rem;
+      padding: 0.65rem 0.5rem;
       border: 0;
-      border-bottom: 1px solid var(--app-border);
+      border-radius: 0.5rem;
       color: var(--app-text);
       background: transparent;
       text-align: left;
       cursor: pointer;
     }
-    .notification-list > button.unread {
-      background: color-mix(in srgb, var(--p-primary-color) 7%, transparent);
+    .notification-list > button:hover {
+      background: var(--app-sunken);
+    }
+    .notification-list > button.unread strong {
+      font-weight: 700;
+    }
+    .unread-dot {
+      width: 0.5rem;
+      height: 0.5rem;
+      border-radius: 50%;
+      background: var(--p-primary-color);
     }
     .notification-icon {
       display: grid;
-      width: 2.4rem;
-      height: 2.4rem;
+      width: 2rem;
+      height: 2rem;
       place-items: center;
       border-radius: 50%;
-      background: var(--app-background);
+      background: var(--app-sunken);
+      color: var(--app-text-muted);
+      font-size: 0.85rem;
     }
     .notification-copy {
       display: grid;
-      gap: 0.25rem;
+      gap: 0.1rem;
+      min-width: 0;
+    }
+    .notification-copy strong {
+      font-size: 0.85rem;
+      font-weight: 550;
     }
     small {
       color: var(--app-text-muted);
+      font-size: 0.75rem;
     }
     p-select {
+      width: auto;
+    }
+    .preferences p-select {
       width: 100%;
     }
-    @media (max-width: 700px) {
-      .notification-filters {
+    @media (max-width: 950px) {
+      .notifications-columns {
         grid-template-columns: 1fr;
       }
     }
@@ -260,7 +302,7 @@ export class NotificationsPage {
     );
   }
   summary(item: AppNotification): string {
-    return this.i18n.language() === 'French' ? item.summaryFrench : item.summaryEnglish;
+    return item.summary;
   }
   icon(type: string): string {
     return type.includes('Comment')

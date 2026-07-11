@@ -42,9 +42,8 @@ public sealed class Tenant : Entity
 
     public bool RequesterPortalEnabled { get; set; }
 
-    public string? RequesterPortalIntroductionEnglish { get; set; }
+    public string? RequesterPortalIntroduction { get; set; }
 
-    public string? RequesterPortalIntroductionFrench { get; set; }
 
     public ICollection<TenantMembership> Memberships { get; set; } = [];
 
@@ -61,9 +60,8 @@ public sealed class Project : Entity
 
     public string Key { get; set; } = string.Empty;
 
-    public string NameEnglish { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
 
-    public string NameFrench { get; set; } = string.Empty;
 
     public string? Description { get; set; }
 

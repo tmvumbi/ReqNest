@@ -67,9 +67,9 @@ public static class ProjectEndpoints
 
         var key = request.Key.Trim().ToUpperInvariant();
         if (key.Length is < 2 or > 12 || !key.All(character => char.IsAsciiLetterOrDigit(character) || character == '_') ||
-            string.IsNullOrWhiteSpace(request.NameEnglish) || string.IsNullOrWhiteSpace(request.NameFrench))
+            string.IsNullOrWhiteSpace(request.Name))
         {
-            return ApiProblems.Validation(httpContext, "A 2-12 character project key and both localized names are required.");
+            return ApiProblems.Validation(httpContext, "A 2-12 character project key and a name are required.");
         }
 
         if (await dbContext.Projects.AnyAsync(entity => entity.Key == key, cancellationToken))
@@ -90,8 +90,7 @@ public static class ProjectEndpoints
         {
             TenantId = authorization.TenantId,
             Key = key,
-            NameEnglish = request.NameEnglish.Trim(),
-            NameFrench = request.NameFrench.Trim(),
+            Name = request.Name.Trim(),
             Description = request.Description?.Trim(),
             WorkflowId = workflowId,
             DefaultPriority = (int)request.DefaultPriority,
@@ -148,13 +147,12 @@ public static class ProjectEndpoints
             return ApiProblems.NotFound(httpContext, "Project");
         }
 
-        if (string.IsNullOrWhiteSpace(request.NameEnglish) || string.IsNullOrWhiteSpace(request.NameFrench))
+        if (string.IsNullOrWhiteSpace(request.Name))
         {
-            return ApiProblems.Validation(httpContext, "Both localized project names are required.");
+            return ApiProblems.Validation(httpContext, "A project name is required.");
         }
 
-        project.NameEnglish = request.NameEnglish.Trim();
-        project.NameFrench = request.NameFrench.Trim();
+        project.Name = request.Name.Trim();
         project.Description = request.Description?.Trim();
         project.DefaultPriority = (int)request.DefaultPriority;
         project.DefaultAssigneeUserId = request.DefaultAssigneeUserId;
@@ -237,14 +235,12 @@ public static class ProjectEndpoints
             {
                 entity.WorkflowStatusId,
                 entity.WorkflowStatus.Key,
-                entity.WorkflowStatus.LabelEnglish,
-                entity.WorkflowStatus.LabelFrench,
+                entity.WorkflowStatus.Label,
             })
             .Select(group => new ProjectStatusCount(
                 group.Key.WorkflowStatusId,
                 group.Key.Key,
-                group.Key.LabelEnglish,
-                group.Key.LabelFrench,
+                group.Key.Label,
                 group.Count()))
             .ToArrayAsync(cancellationToken);
         var byPriority = await tickets
@@ -279,8 +275,7 @@ public static class ProjectEndpoints
     private static ProjectResponse ToResponse(Project entity) => new(
         entity.Id,
         entity.Key,
-        entity.NameEnglish,
-        entity.NameFrench,
+        entity.Name,
         entity.Description,
         entity.IsArchived,
         entity.WorkflowId,
@@ -292,16 +287,14 @@ public static class ProjectEndpoints
 
 public sealed record CreateProjectRequest(
     string Key,
-    string NameEnglish,
-    string NameFrench,
+    string Name,
     string? Description,
     Guid? WorkflowId,
     TicketPriority DefaultPriority,
     Guid? DefaultAssigneeUserId);
 
 public sealed record UpdateProjectRequest(
-    string NameEnglish,
-    string NameFrench,
+    string Name,
     string? Description,
     TicketPriority DefaultPriority,
     Guid? DefaultAssigneeUserId);
@@ -309,8 +302,7 @@ public sealed record UpdateProjectRequest(
 public sealed record ProjectResponse(
     Guid Id,
     string Key,
-    string NameEnglish,
-    string NameFrench,
+    string Name,
     string? Description,
     bool IsArchived,
     Guid WorkflowId,
@@ -322,8 +314,7 @@ public sealed record ProjectResponse(
 public sealed record ProjectStatusCount(
     Guid StatusId,
     string Key,
-    string LabelEnglish,
-    string LabelFrench,
+    string Label,
     int Count);
 
 public sealed record ProjectPriorityCount(TicketPriority Priority, int Count);

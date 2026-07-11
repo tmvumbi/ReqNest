@@ -1,3 +1,4 @@
+<p-toast position="bottom-right" />
 <div class="app-frame" [class.navigation-open]="navigationOpen()">
   <a class="skip-link" href="#main-content" (click)="skipToContent($event)">{{
     i18n.text('nav.skip')
@@ -14,67 +15,109 @@
           store.activeTenant()?.tenantShortName?.slice(0, 1) || 'R'
         }}</span>
       }
-      <span>{{ store.activeTenant()?.tenantName || 'ReqNest' }}</span>
+      <span class="brand-name">{{ store.activeTenant()?.tenantName || 'ReqNest' }}</span>
     </a>
-    <div class="active-tenant">
-      <span>{{ store.activeTenant()?.tenantShortName }}</span>
-      <strong>{{ store.activeTenant()?.tenantName }}</strong>
-    </div>
+    @if (store.session()!.tenants.length > 1) {
+      <p-select
+        class="tenant-switcher"
+        [options]="store.session()!.tenants"
+        optionLabel="tenantName"
+        optionValue="tenantId"
+        [ngModel]="store.activeTenantId()"
+        (ngModelChange)="switchTenant($event)"
+        ariaLabel="Active company"
+        size="small"
+        [fluid]="true"
+      />
+    }
+    @if (store.canMaintainTickets()) {
+      <a pButton routerLink="/app/tickets/new" class="new-ticket" (click)="closeNavigation()">
+        <app-icon name="plus" [size]="16" />
+        {{ i18n.text('tickets.new') }}
+      </a>
+    }
     <nav>
-      <a routerLink="/app/dashboard" routerLinkActive="active" (click)="closeNavigation()">{{
-        i18n.text('nav.dashboard')
-      }}</a>
-      <a routerLink="/app/tickets" routerLinkActive="active" (click)="closeNavigation()">{{
-        i18n.text('nav.tickets')
-      }}</a>
-      <a routerLink="/app/projects" routerLinkActive="active" (click)="closeNavigation()">{{
-        i18n.text('nav.projects')
-      }}</a>
-      <a routerLink="/app/reports" routerLinkActive="active" (click)="closeNavigation()">{{
-        i18n.text('nav.reports')
-      }}</a>
-      <a routerLink="/app/knowledge" routerLinkActive="active" (click)="closeNavigation()">{{
-        i18n.language() === 'French' ? 'Base de connaissances' : 'Knowledge base'
-      }}</a>
-      <a routerLink="/app/notifications" routerLinkActive="active" (click)="closeNavigation()">
-        <span>{{ i18n.text('nav.notifications') }}</span>
-        @if (unreadCount() > 0) {
-          <p-badge [value]="unreadCount().toString()" />
-        }
+      <span class="nav-section">{{ i18n.text('nav.workspace') }}</span>
+      <a
+        routerLink="/app/dashboard"
+        routerLinkActive="active"
+        (click)="closeNavigation()"
+      >
+        <app-icon name="dashboard" [size]="17" />
+        <span>{{ i18n.text('nav.dashboard') }}</span>
+      </a>
+      <a routerLink="/app/assistant" routerLinkActive="active" (click)="closeNavigation()">
+        <app-icon name="sparkles" [size]="17" />
+        <span>{{ i18n.text('nav.assistant') }}</span>
+      </a>
+      <a routerLink="/app/tickets" routerLinkActive="active" (click)="closeNavigation()">
+        <app-icon name="tickets" [size]="17" />
+        <span>{{ i18n.text('nav.board') }}</span>
+      </a>
+      <a routerLink="/app/projects" routerLinkActive="active" (click)="closeNavigation()">
+        <app-icon name="projects" [size]="17" />
+        <span>{{ i18n.text('nav.projects') }}</span>
+      </a>
+      <a routerLink="/app/reports" routerLinkActive="active" (click)="closeNavigation()">
+        <app-icon name="reports" [size]="17" />
+        <span>{{ i18n.text('nav.reports') }}</span>
+      </a>
+      <a routerLink="/app/knowledge" routerLinkActive="active" (click)="closeNavigation()">
+        <app-icon name="knowledge" [size]="17" />
+        <span>{{ i18n.text('nav.knowledge') }}</span>
       </a>
       @if (store.canManageProjects()) {
-        <span class="nav-section">Admin</span>
-        <a routerLink="/app/admin/users" routerLinkActive="active" (click)="closeNavigation()">{{
-          i18n.text('nav.users')
-        }}</a>
-        <a
-          routerLink="/app/admin/workflows"
-          routerLinkActive="active"
-          (click)="closeNavigation()"
-          >{{ i18n.text('nav.workflows') }}</a
+        <button
+          type="button"
+          class="nav-section nav-section-toggle"
+          (click)="adminOpen.set(!adminOpen())"
+          [attr.aria-expanded]="adminOpen()"
         >
+          <span>{{ i18n.text('nav.admin') }}</span>
+          <app-icon name="chevron-down" [size]="13" [class.collapsed]="!adminOpen()" />
+        </button>
       }
-      @if (store.isAdministrator()) {
-        <a
-          routerLink="/app/admin/operations"
-          routerLinkActive="active"
-          (click)="closeNavigation()"
-          >{{ i18n.language() === 'French' ? 'Opérations' : 'Operations' }}</a
-        >
-        <a
-          routerLink="/app/admin/integrations"
-          routerLinkActive="active"
-          (click)="closeNavigation()"
-          >{{
-            i18n.language() === 'French' ? 'Portail et intégrations' : 'Portal & integrations'
-          }}</a
-        >
-        <a routerLink="/app/admin/settings" routerLinkActive="active" (click)="closeNavigation()">{{
-          i18n.text('nav.settings')
-        }}</a>
-        <a routerLink="/app/admin/audit" routerLinkActive="active" (click)="closeNavigation()">{{
-          i18n.text('nav.audit')
-        }}</a>
+      @if (adminOpen()) {
+        @if (store.canManageProjects()) {
+          <a routerLink="/app/admin/users" routerLinkActive="active" (click)="closeNavigation()">
+            <app-icon name="users" [size]="17" />
+            <span>{{ i18n.text('nav.users') }}</span>
+          </a>
+          <a
+            routerLink="/app/admin/workflows"
+            routerLinkActive="active"
+            (click)="closeNavigation()"
+          >
+            <app-icon name="workflows" [size]="17" />
+            <span>{{ i18n.text('nav.workflows') }}</span>
+          </a>
+        }
+        @if (store.isAdministrator()) {
+          <a
+            routerLink="/app/admin/operations"
+            routerLinkActive="active"
+            (click)="closeNavigation()"
+          >
+            <app-icon name="operations" [size]="17" />
+            <span>{{ i18n.text('nav.operations') }}</span>
+          </a>
+          <a
+            routerLink="/app/admin/integrations"
+            routerLinkActive="active"
+            (click)="closeNavigation()"
+          >
+            <app-icon name="integrations" [size]="17" />
+            <span>{{ i18n.text('nav.integrations') }}</span>
+          </a>
+          <a routerLink="/app/admin/settings" routerLinkActive="active" (click)="closeNavigation()">
+            <app-icon name="settings" [size]="17" />
+            <span>{{ i18n.text('nav.settings') }}</span>
+          </a>
+          <a routerLink="/app/admin/audit" routerLinkActive="active" (click)="closeNavigation()">
+            <app-icon name="audit" [size]="17" />
+            <span>{{ i18n.text('nav.audit') }}</span>
+          </a>
+        }
       }
     </nav>
   </aside>
@@ -99,43 +142,147 @@
       >
         ☰
       </button>
-      @if (store.session()!.tenants.length > 1) {
-        <p-select
-          [options]="store.session()!.tenants"
-          optionLabel="tenantName"
-          optionValue="tenantId"
-          [ngModel]="store.activeTenantId()"
-          (ngModelChange)="switchTenant($event)"
-          ariaLabel="Active company"
-        />
-      } @else {
-        <strong>{{ store.activeTenant()?.tenantName }}</strong>
-      }
+      <nav class="breadcrumbs" aria-label="Breadcrumb">
+        @for (crumb of breadcrumbs(); track $index; let last = $last) {
+          <span class="crumb" [class.current]="last">{{ crumb }}</span>
+          @if (!last) {
+            <span class="crumb-separator" aria-hidden="true">/</span>
+          }
+        }
+      </nav>
       <div class="topbar-actions">
+        <div class="global-search">
+          <app-icon name="search" [size]="15" />
+          <input
+            type="search"
+            [placeholder]="i18n.text('nav.searchPlaceholder')"
+            [attr.aria-label]="i18n.text('nav.searchPlaceholder')"
+            [(ngModel)]="searchTerm"
+            (keydown.enter)="submitSearch()"
+          />
+        </div>
         <button
-          pButton
           type="button"
-          severity="secondary"
-          [text]="true"
-          (click)="setLanguage()"
-          [attr.aria-label]="i18n.text('nav.language')"
+          class="icon-action"
+          [attr.aria-label]="i18n.text('nav.notifications')"
+          [attr.aria-expanded]="notificationsOpen()"
+          (click)="toggleNotifications()"
         >
-          {{ i18n.language() === 'English' ? 'FR' : 'EN' }}
+          <app-icon name="bell" [size]="18" />
+          @if (unreadCount() > 0) {
+            <span class="dot" aria-hidden="true"></span>
+          }
         </button>
-        <p-select
-          [options]="themeOptions"
-          optionLabel="label"
-          optionValue="value"
-          [ngModel]="theme.preference()"
-          (ngModelChange)="setTheme($event)"
-          [ariaLabel]="i18n.text('nav.theme')"
-        />
-        <span class="user-name">{{ store.session()?.displayName }}</span>
-        <button pButton type="button" severity="secondary" [outlined]="true" (click)="signOut()">
-          {{ i18n.text('nav.signOut') }}
+        <button
+          type="button"
+          class="avatar-button"
+          [attr.aria-expanded]="userMenuOpen()"
+          [attr.aria-label]="store.session()?.displayName"
+          (click)="userMenuOpen.set(!userMenuOpen())"
+        >
+          @if (avatarUrl(); as url) {
+            <img class="avatar-image" [src]="url" alt="" />
+          } @else {
+            {{ userInitials() }}
+          }
         </button>
       </div>
+      @if (notificationsOpen()) {
+        <button
+          type="button"
+          class="menu-scrim"
+          aria-label="Close notifications"
+          (click)="notificationsOpen.set(false)"
+        ></button>
+        <div
+          class="notification-panel"
+          role="dialog"
+          tabindex="-1"
+          [attr.aria-label]="i18n.text('nav.notifications')"
+          (keydown.escape)="notificationsOpen.set(false)"
+        >
+          <div class="notification-panel-header">
+            <strong>{{ i18n.text('nav.notifications') }}</strong>
+            <button type="button" (click)="markAllNotificationsRead()">
+              {{ i18n.text('notifications.markAll') }}
+            </button>
+          </div>
+          <div class="notification-panel-list">
+            @for (notification of recentNotifications(); track notification.id) {
+              <button
+                type="button"
+                [class.unread]="!notification.readAt"
+                (click)="openNotification(notification)"
+              >
+                <span class="notification-copy">
+                  <span class="notification-summary">{{ notificationSummary(notification) }}</span>
+                  <time>{{ notification.createdAt | localizedDate: 'medium' }}</time>
+                </span>
+                @if (!notification.readAt) {
+                  <span class="unread-dot" aria-hidden="true"></span>
+                }
+              </button>
+            } @empty {
+              <p class="notification-empty">{{ i18n.text('common.empty') }}</p>
+            }
+          </div>
+          <div class="notification-panel-footer">
+            <a routerLink="/app/notifications" (click)="notificationsOpen.set(false)">
+              <app-icon name="settings" [size]="14" />
+              {{ i18n.text('notifications.viewAll') }}
+            </a>
+          </div>
+        </div>
+      }
+      @if (userMenuOpen()) {
+        <button
+          type="button"
+          class="menu-scrim"
+          aria-label="Close menu"
+          (click)="userMenuOpen.set(false)"
+        ></button>
+        <div class="user-menu" role="menu" tabindex="-1" (keydown.escape)="userMenuOpen.set(false)">
+          <div class="user-menu-header">
+            <span class="avatar-button as-badge" aria-hidden="true">
+              @if (avatarUrl(); as url) {
+                <img class="avatar-image" [src]="url" alt="" />
+              } @else {
+                {{ userInitials() }}
+              }
+            </span>
+            <div>
+              <strong>{{ store.session()?.displayName }}</strong>
+              <small>{{ store.activeTenant()?.tenantName }}</small>
+            </div>
+          </div>
+          <a routerLink="/app/profile" role="menuitem" class="menu-link" (click)="userMenuOpen.set(false)">
+            <app-icon name="users" [size]="16" />
+            {{ i18n.text('nav.profile') }}
+          </a>
+          <button type="button" role="menuitem" (click)="setLanguage()">
+            <app-icon name="globe" [size]="16" />
+            {{ i18n.language() === 'English' ? 'Passer en français' : 'Switch to English' }}
+          </button>
+          <div class="theme-row" role="group" [attr.aria-label]="i18n.text('nav.theme')">
+            <app-icon name="theme" [size]="16" />
+            @for (option of themeOptions; track option.value) {
+              <button
+                type="button"
+                [class.selected]="theme.preference() === option.value"
+                (click)="setTheme(option.value)"
+              >
+                {{ option.label }}
+              </button>
+            }
+          </div>
+          <button type="button" role="menuitem" class="danger" (click)="signOut()">
+            <app-icon name="sign-out" [size]="16" />
+            {{ i18n.text('nav.signOut') }}
+          </button>
+        </div>
+      }
     </header>
     <main id="main-content" tabindex="-1"><router-outlet /></main>
+    <app-assistant-dock />
   </section>
 </div>

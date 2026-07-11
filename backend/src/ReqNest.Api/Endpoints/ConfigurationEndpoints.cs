@@ -17,8 +17,10 @@ public static class ConfigurationEndpoints
         schema.MapGet("/", GetSchemaAsync);
         schema.MapPost("/types", CreateTypeAsync);
         schema.MapPut("/types/{definitionId:guid}", UpdateTypeAsync);
+        schema.MapDelete("/types/{definitionId:guid}", DeleteTypeAsync);
         schema.MapPost("/priorities", CreatePriorityAsync);
         schema.MapPut("/priorities/{definitionId:guid}", UpdatePriorityAsync);
+        schema.MapDelete("/priorities/{definitionId:guid}", DeletePriorityAsync);
         schema.MapPost("/custom-fields", CreateCustomFieldAsync);
         schema.MapPut("/custom-fields/{definitionId:guid}", UpdateCustomFieldAsync);
 
@@ -57,8 +59,7 @@ public static class ConfigurationEndpoints
                 entity.Id,
                 entity.ProjectId,
                 entity.Key,
-                entity.LabelEnglish,
-                entity.LabelFrench,
+                entity.Label,
                 entity.Order,
                 entity.IsActive))
             .ToArrayAsync(cancellationToken);
@@ -70,23 +71,22 @@ public static class ConfigurationEndpoints
                 entity.Id,
                 entity.ProjectId,
                 entity.Key,
-                entity.LabelEnglish,
-                entity.LabelFrench,
+                entity.Label,
                 entity.Color,
                 entity.Weight,
                 entity.Order,
                 entity.IsActive))
             .ToArrayAsync(cancellationToken);
         var fields = await dbContext.CustomFieldDefinitions.AsNoTracking()
-            .Where(entity => entity.ProjectId == null || entity.ProjectId == projectId)
-            .OrderByDescending(entity => entity.ProjectId == projectId)
+            .Where(entity => entity.ProjectIds.Length == 0 ||
+                             projectId != null && entity.ProjectIds.Contains(projectId.Value))
+            .OrderByDescending(entity => entity.ProjectIds.Length > 0)
             .ThenBy(entity => entity.Order)
             .Select(entity => new CustomFieldDefinitionResponse(
                 entity.Id,
-                entity.ProjectId,
+                entity.ProjectIds,
                 entity.Key,
-                entity.LabelEnglish,
-                entity.LabelFrench,
+                entity.Label,
                 entity.Kind,
                 entity.IsRequired,
                 entity.IsActive,
@@ -107,8 +107,7 @@ public static class ConfigurationEndpoints
             authorization,
             request.ProjectId,
             request.Key,
-            request.LabelEnglish,
-            request.LabelFrench,
+            request.Label,
             httpContext);
         if (error is not null)
         {
@@ -143,8 +142,7 @@ public static class ConfigurationEndpoints
             authorization,
             entity.ProjectId,
             entity.Key,
-            request.LabelEnglish,
-            request.LabelFrench,
+            request.Label,
             httpContext);
         if (error is not null || request.ProjectId != entity.ProjectId || request.Key != entity.Key)
         {
@@ -155,6 +153,82 @@ public static class ConfigurationEndpoints
         AddAudit(dbContext, httpContext, authorization!.TenantId, "ticket_schema.type.updated", entity.Id);
         await dbContext.SaveChangesAsync(cancellationToken);
         return TypedResults.Ok(ToResponse(entity));
+    }
+
+    private static async Task<IResult> DeleteTypeAsync(
+        Guid definitionId,
+        HttpContext httpContext,
+        ReqNestDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        var authorization = httpContext.TenantAuthorization();
+        var entity = await dbContext.TicketTypeDefinitions.SingleOrDefaultAsync(
+            item => item.Id == definitionId,
+            cancellationToken);
+        if (entity is null)
+        {
+            return ApiProblems.NotFound(httpContext, "Ticket type");
+        }
+
+        var error = ValidateScope(authorization, entity.ProjectId, httpContext);
+        if (error is not null)
+        {
+            return error;
+        }
+
+        var key = entity.Key;
+        var inUse = await dbContext.Tickets.AsNoTracking().AnyAsync(
+            ticket => ticket.TypeKey == key &&
+                      (entity.ProjectId == null || ticket.ProjectId == entity.ProjectId),
+            cancellationToken);
+        if (inUse)
+        {
+            return ApiProblems.Conflict(
+                httpContext, "This ticket type is used by existing tickets and cannot be deleted.", "definition_in_use");
+        }
+
+        dbContext.TicketTypeDefinitions.Remove(entity);
+        AddAudit(dbContext, httpContext, authorization!.TenantId, "ticket_schema.type.deleted", entity.Id);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return TypedResults.NoContent();
+    }
+
+    private static async Task<IResult> DeletePriorityAsync(
+        Guid definitionId,
+        HttpContext httpContext,
+        ReqNestDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        var authorization = httpContext.TenantAuthorization();
+        var entity = await dbContext.TicketPriorityDefinitions.SingleOrDefaultAsync(
+            item => item.Id == definitionId,
+            cancellationToken);
+        if (entity is null)
+        {
+            return ApiProblems.NotFound(httpContext, "Ticket priority");
+        }
+
+        var error = ValidateScope(authorization, entity.ProjectId, httpContext);
+        if (error is not null)
+        {
+            return error;
+        }
+
+        var key = entity.Key;
+        var inUse = await dbContext.Tickets.AsNoTracking().AnyAsync(
+            ticket => ticket.PriorityKey == key &&
+                      (entity.ProjectId == null || ticket.ProjectId == entity.ProjectId),
+            cancellationToken);
+        if (inUse)
+        {
+            return ApiProblems.Conflict(
+                httpContext, "This priority is used by existing tickets and cannot be deleted.", "definition_in_use");
+        }
+
+        dbContext.TicketPriorityDefinitions.Remove(entity);
+        AddAudit(dbContext, httpContext, authorization!.TenantId, "ticket_schema.priority.deleted", entity.Id);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return TypedResults.NoContent();
     }
 
     private static async Task<IResult> CreatePriorityAsync(
@@ -168,8 +242,7 @@ public static class ConfigurationEndpoints
             authorization,
             request.ProjectId,
             request.Key,
-            request.LabelEnglish,
-            request.LabelFrench,
+            request.Label,
             httpContext);
         if (error is not null || request.Weight is < 0 or > 100 || !ValidColor(request.Color))
         {
@@ -204,8 +277,7 @@ public static class ConfigurationEndpoints
             authorization,
             entity.ProjectId,
             entity.Key,
-            request.LabelEnglish,
-            request.LabelFrench,
+            request.Label,
             httpContext);
         if (error is not null || request.ProjectId != entity.ProjectId || request.Key != entity.Key ||
             request.Weight is < 0 or > 100 || !ValidColor(request.Color))
@@ -257,10 +329,9 @@ public static class ConfigurationEndpoints
         }
 
         var error = ValidateCustomField(request, authorization, httpContext);
-        if (error is not null || request.ProjectId != entity.ProjectId || request.Key != entity.Key ||
-            request.Kind != entity.Kind)
+        if (error is not null || request.Key != entity.Key || request.Kind != entity.Kind)
         {
-            return error ?? ApiProblems.Validation(httpContext, "The key, type, and scope cannot change after creation.");
+            return error ?? ApiProblems.Validation(httpContext, "The key and type cannot change after creation.");
         }
 
         Apply(entity, request);
@@ -288,8 +359,8 @@ public static class ConfigurationEndpoints
             .Where(entity =>
                 authorization.AllProjectRoles.Count > 0 ||
                 authorization.AllProjectPermissions.Count > 0 ||
-                entity.ProjectId == null ||
-                entity.ProjectId != null && allowedProjectIds.Contains(entity.ProjectId.Value))
+                entity.ProjectIds.Length == 0 ||
+                entity.ProjectIds.Any(id => allowedProjectIds.Contains(id)))
             .Include(entity => entity.Targets)
             .Include(entity => entity.Holidays)
             .OrderByDescending(entity => entity.IsDefault)
@@ -348,11 +419,6 @@ public static class ConfigurationEndpoints
             return ApiProblems.NotFound(httpContext, "SLA policy");
         }
 
-        if (request.ProjectId != policy.ProjectId)
-        {
-            return ApiProblems.Validation(httpContext, "The SLA policy scope cannot change.");
-        }
-
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
         if (request.IsDefault)
         {
@@ -390,7 +456,8 @@ public static class ConfigurationEndpoints
         var project = await dbContext.Projects.SingleOrDefaultAsync(entity => entity.Id == projectId, cancellationToken);
         var policy = await dbContext.SlaPolicies.AsNoTracking()
             .SingleOrDefaultAsync(entity => entity.Id == policyId && entity.IsActive, cancellationToken);
-        if (project is null || policy is null || policy.ProjectId is not null && policy.ProjectId != projectId)
+        if (project is null || policy is null ||
+            policy.ProjectIds.Length > 0 && !policy.ProjectIds.Contains(projectId))
         {
             return ApiProblems.NotFound(httpContext, "Project or SLA policy");
         }
@@ -401,12 +468,26 @@ public static class ConfigurationEndpoints
         return TypedResults.NoContent();
     }
 
+    private static IResult? ValidateScope(
+        TenantAuthorization? authorization,
+        Guid? projectId,
+        HttpContext context)
+    {
+        if (authorization is null)
+        {
+            return ApiProblems.TenantRequired(context);
+        }
+
+        return (projectId is null ? !authorization.IsTenantAdministrator() : !authorization.CanManageProject(projectId.Value))
+            ? ApiProblems.Forbidden(context)
+            : null;
+    }
+
     private static IResult? ValidateScopeAndDefinition(
         TenantAuthorization? authorization,
         Guid? projectId,
         string key,
-        string labelEnglish,
-        string labelFrench,
+        string label,
         HttpContext context)
     {
         if (authorization is null)
@@ -419,12 +500,30 @@ public static class ConfigurationEndpoints
             return ApiProblems.Forbidden(context);
         }
 
-        return string.IsNullOrWhiteSpace(key) || key.Trim().Length > 80 ||
-               !System.Text.RegularExpressions.Regex.IsMatch(key, "^[A-Za-z][A-Za-z0-9_]*$") ||
-               string.IsNullOrWhiteSpace(labelEnglish) || string.IsNullOrWhiteSpace(labelFrench) ||
-               labelEnglish.Trim().Length > 120 || labelFrench.Trim().Length > 120
-            ? ApiProblems.Validation(context, "A stable key and both localized labels are required.")
+        return ValidateDefinition(key, label, context);
+    }
+
+    private static IResult? ValidateDefinition(string key, string label, HttpContext context) =>
+        string.IsNullOrWhiteSpace(key) || key.Trim().Length > 80 ||
+        !System.Text.RegularExpressions.Regex.IsMatch(key, "^[A-Za-z][A-Za-z0-9_]*$") ||
+        string.IsNullOrWhiteSpace(label) || label.Trim().Length > 120
+            ? ApiProblems.Validation(context, "A stable key and a label are required.")
             : null;
+
+    private static IResult? ValidateProjectSet(
+        TenantAuthorization? authorization,
+        IReadOnlyCollection<Guid> projectIds,
+        HttpContext context)
+    {
+        if (authorization is null)
+        {
+            return ApiProblems.TenantRequired(context);
+        }
+
+        var allowed = projectIds.Count == 0
+            ? authorization.IsTenantAdministrator()
+            : projectIds.All(authorization.CanManageProject);
+        return allowed ? null : ApiProblems.Forbidden(context);
     }
 
     private static IResult? ValidateCustomField(
@@ -432,13 +531,8 @@ public static class ConfigurationEndpoints
         TenantAuthorization? authorization,
         HttpContext context)
     {
-        var error = ValidateScopeAndDefinition(
-            authorization,
-            request.ProjectId,
-            request.Key,
-            request.LabelEnglish,
-            request.LabelFrench,
-            context);
+        var error = ValidateProjectSet(authorization, request.ProjectIds, context) ??
+                    ValidateDefinition(request.Key, request.Label, context);
         if (error is not null)
         {
             return error;
@@ -459,14 +553,10 @@ public static class ConfigurationEndpoints
         TenantAuthorization? authorization,
         HttpContext context)
     {
-        if (authorization is null)
+        var scopeError = ValidateProjectSet(authorization, request.ProjectIds, context);
+        if (scopeError is not null)
         {
-            return ApiProblems.TenantRequired(context);
-        }
-
-        if (request.ProjectId is null ? !authorization.IsTenantAdministrator() : !authorization.CanManageProject(request.ProjectId.Value))
-        {
-            return ApiProblems.Forbidden(context);
+            return scopeError;
         }
 
         try
@@ -501,8 +591,7 @@ public static class ConfigurationEndpoints
     {
         entity.ProjectId = request.ProjectId;
         entity.Key = request.Key.Trim();
-        entity.LabelEnglish = request.LabelEnglish.Trim();
-        entity.LabelFrench = request.LabelFrench.Trim();
+        entity.Label = request.Label.Trim();
         entity.Order = request.Order;
         entity.IsActive = request.IsActive;
     }
@@ -511,8 +600,7 @@ public static class ConfigurationEndpoints
     {
         entity.ProjectId = request.ProjectId;
         entity.Key = request.Key.Trim();
-        entity.LabelEnglish = request.LabelEnglish.Trim();
-        entity.LabelFrench = request.LabelFrench.Trim();
+        entity.Label = request.Label.Trim();
         entity.Color = request.Color;
         entity.Weight = request.Weight;
         entity.Order = request.Order;
@@ -521,10 +609,9 @@ public static class ConfigurationEndpoints
 
     private static void Apply(CustomFieldDefinition entity, UpsertCustomFieldDefinitionRequest request)
     {
-        entity.ProjectId = request.ProjectId;
+        entity.ProjectIds = request.ProjectIds.Distinct().ToArray();
         entity.Key = request.Key.Trim();
-        entity.LabelEnglish = request.LabelEnglish.Trim();
-        entity.LabelFrench = request.LabelFrench.Trim();
+        entity.Label = request.Label.Trim();
         entity.Kind = request.Kind;
         entity.IsRequired = request.IsRequired;
         entity.IsActive = request.IsActive;
@@ -534,7 +621,7 @@ public static class ConfigurationEndpoints
 
     private static void Apply(SlaPolicy entity, UpsertSlaPolicyRequest request)
     {
-        entity.ProjectId = request.ProjectId;
+        entity.ProjectIds = request.ProjectIds.Distinct().ToArray();
         entity.Name = request.Name.Trim();
         entity.TimeZone = request.TimeZone;
         entity.IsDefault = request.IsDefault;
@@ -585,19 +672,19 @@ public static class ConfigurationEndpoints
         System.Text.RegularExpressions.Regex.IsMatch(color, "^#[0-9A-Fa-f]{6}$");
 
     private static TicketTypeDefinitionResponse ToResponse(TicketTypeDefinition entity) => new(
-        entity.Id, entity.ProjectId, entity.Key, entity.LabelEnglish, entity.LabelFrench, entity.Order, entity.IsActive);
+        entity.Id, entity.ProjectId, entity.Key, entity.Label, entity.Order, entity.IsActive);
 
     private static TicketPriorityDefinitionResponse ToResponse(TicketPriorityDefinition entity) => new(
-        entity.Id, entity.ProjectId, entity.Key, entity.LabelEnglish, entity.LabelFrench, entity.Color,
+        entity.Id, entity.ProjectId, entity.Key, entity.Label, entity.Color,
         entity.Weight, entity.Order, entity.IsActive);
 
     private static CustomFieldDefinitionResponse ToResponse(CustomFieldDefinition entity) => new(
-        entity.Id, entity.ProjectId, entity.Key, entity.LabelEnglish, entity.LabelFrench, entity.Kind,
+        entity.Id, entity.ProjectIds, entity.Key, entity.Label, entity.Kind,
         entity.IsRequired, entity.IsActive, entity.Order, entity.OptionsJson);
 
     private static SlaPolicyResponse ToResponse(SlaPolicy entity) => new(
         entity.Id,
-        entity.ProjectId,
+        entity.ProjectIds,
         entity.Name,
         entity.TimeZone,
         entity.IsDefault,
@@ -619,8 +706,7 @@ public static class ConfigurationEndpoints
 public sealed record UpsertTicketTypeDefinitionRequest(
     Guid? ProjectId,
     string Key,
-    string LabelEnglish,
-    string LabelFrench,
+    string Label,
     int Order,
     bool IsActive);
 
@@ -628,16 +714,14 @@ public sealed record TicketTypeDefinitionResponse(
     Guid Id,
     Guid? ProjectId,
     string Key,
-    string LabelEnglish,
-    string LabelFrench,
+    string Label,
     int Order,
     bool IsActive);
 
 public sealed record UpsertTicketPriorityDefinitionRequest(
     Guid? ProjectId,
     string Key,
-    string LabelEnglish,
-    string LabelFrench,
+    string Label,
     string Color,
     int Weight,
     int Order,
@@ -647,18 +731,16 @@ public sealed record TicketPriorityDefinitionResponse(
     Guid Id,
     Guid? ProjectId,
     string Key,
-    string LabelEnglish,
-    string LabelFrench,
+    string Label,
     string Color,
     int Weight,
     int Order,
     bool IsActive);
 
 public sealed record UpsertCustomFieldDefinitionRequest(
-    Guid? ProjectId,
+    IReadOnlyCollection<Guid> ProjectIds,
     string Key,
-    string LabelEnglish,
-    string LabelFrench,
+    string Label,
     CustomFieldKind Kind,
     bool IsRequired,
     bool IsActive,
@@ -667,10 +749,9 @@ public sealed record UpsertCustomFieldDefinitionRequest(
 
 public sealed record CustomFieldDefinitionResponse(
     Guid Id,
-    Guid? ProjectId,
+    IReadOnlyCollection<Guid> ProjectIds,
     string Key,
-    string LabelEnglish,
-    string LabelFrench,
+    string Label,
     CustomFieldKind Kind,
     bool IsRequired,
     bool IsActive,
@@ -683,7 +764,7 @@ public sealed record TicketSchemaResponse(
     IReadOnlyCollection<CustomFieldDefinitionResponse> CustomFields);
 
 public sealed record UpsertSlaPolicyRequest(
-    Guid? ProjectId,
+    IReadOnlyCollection<Guid> ProjectIds,
     string Name,
     string TimeZone,
     bool IsDefault,
@@ -702,7 +783,7 @@ public sealed record SlaHolidayRequest(DateOnly Date, string Name);
 
 public sealed record SlaPolicyResponse(
     Guid Id,
-    Guid? ProjectId,
+    IReadOnlyCollection<Guid> ProjectIds,
     string Name,
     string TimeZone,
     bool IsDefault,

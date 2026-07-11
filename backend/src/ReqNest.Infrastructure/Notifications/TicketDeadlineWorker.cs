@@ -151,8 +151,7 @@ public sealed class TicketDeadlineWorker(
                 ProjectId = ticket.ProjectId,
                 TicketId = ticket.Id,
                 EventKey = eventKey,
-                SummaryEnglish = english,
-                SummaryFrench = french,
+                Summary = english,
                 DeepLink = $"/app/tickets/{ticket.Id}",
                 GroupKey = ticket.Id.ToString(),
             });

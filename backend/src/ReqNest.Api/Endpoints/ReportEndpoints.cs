@@ -29,14 +29,7 @@ public static class ReportEndpoints
             .WithTags("Reports");
         group.MapGet("/{reportType}", GetAsync);
         group.MapGet("/{reportType}/csv", ExportCsvAsync);
-        group.MapPost("/exports", ExportAsync);
-        group.MapGet("/exports", ListExportsAsync);
-        group.MapGet("/exports/{exportId:guid}/download", DownloadExportAsync);
-        group.MapGet("/schedules", ListSchedulesAsync);
-        group.MapPost("/schedules", CreateScheduleAsync);
-        group.MapPut("/schedules/{scheduleId:guid}", UpdateScheduleAsync);
-        group.MapDelete("/schedules/{scheduleId:guid}", DeleteScheduleAsync);
-        group.MapPost("/schedules/{scheduleId:guid}/run", RunScheduleAsync);
+        group.MapGet("/{reportType}/pdf", ExportPdfAsync);
         endpoints.MapGet("/api/dashboard", DashboardAsync)
             .RequireAuthorization()
             .WithTags("Dashboard");
@@ -101,122 +94,21 @@ public static class ReportEndpoints
             $"reqnest-{reportType}-{DateTimeOffset.UtcNow:yyyyMMddHHmmss}.csv");
     }
 
-    private static async Task<IResult> ListSchedulesAsync(
-        HttpContext httpContext,
-        ReqNestDbContext dbContext,
-        CancellationToken cancellationToken)
-    {
-        var authorization = httpContext.TenantAuthorization();
-        if (authorization is null)
-        {
-            return ApiProblems.TenantRequired(httpContext);
-        }
-
-        var userId = httpContext.User.UserId();
-        var schedules = await dbContext.ReportSchedules.AsNoTracking()
-            .Where(entity => entity.OwnerUserId == userId)
-            .OrderBy(entity => entity.Name)
-            .Select(entity => new ReportScheduleResponse(
-                entity.Id,
-                entity.ProjectId,
-                entity.Name,
-                entity.ReportType,
-                entity.FilterSnapshotJson,
-                entity.Language,
-                entity.Format,
-                entity.Frequency,
-                entity.IsActive,
-                entity.NextRunAt,
-                entity.LastRunAt))
-            .ToArrayAsync(cancellationToken);
-        return TypedResults.Ok<IReadOnlyCollection<ReportScheduleResponse>>(schedules);
-    }
-
-    private static async Task<IResult> CreateScheduleAsync(
-        UpsertReportScheduleRequest request,
-        HttpContext httpContext,
-        ReqNestDbContext dbContext,
-        CancellationToken cancellationToken)
-    {
-        var authorization = httpContext.TenantAuthorization();
-        var error = ValidateSchedule(request, authorization, httpContext);
-        if (error is not null)
-        {
-            return error;
-        }
-
-        var schedule = new ReportSchedule
-        {
-            TenantId = authorization!.TenantId,
-            OwnerUserId = httpContext.User.UserId(),
-        };
-        Apply(schedule, request);
-        dbContext.ReportSchedules.Add(schedule);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return TypedResults.Created($"/api/reports/schedules/{schedule.Id}", ToResponse(schedule));
-    }
-
-    private static async Task<IResult> UpdateScheduleAsync(
-        Guid scheduleId,
-        UpsertReportScheduleRequest request,
-        HttpContext httpContext,
-        ReqNestDbContext dbContext,
-        CancellationToken cancellationToken)
-    {
-        var authorization = httpContext.TenantAuthorization();
-        var error = ValidateSchedule(request, authorization, httpContext);
-        if (error is not null)
-        {
-            return error;
-        }
-
-        var userId = httpContext.User.UserId();
-        var schedule = await dbContext.ReportSchedules.SingleOrDefaultAsync(
-            entity => entity.Id == scheduleId && entity.OwnerUserId == userId,
-            cancellationToken);
-        if (schedule is null)
-        {
-            return ApiProblems.NotFound(httpContext, "Report schedule");
-        }
-
-        Apply(schedule, request);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return TypedResults.Ok(ToResponse(schedule));
-    }
-
-    private static async Task<IResult> DeleteScheduleAsync(
-        Guid scheduleId,
-        HttpContext httpContext,
-        ReqNestDbContext dbContext,
-        CancellationToken cancellationToken)
-    {
-        if (httpContext.TenantAuthorization() is null)
-        {
-            return ApiProblems.TenantRequired(httpContext);
-        }
-
-        var userId = httpContext.User.UserId();
-        var schedule = await dbContext.ReportSchedules.SingleOrDefaultAsync(
-            entity => entity.Id == scheduleId && entity.OwnerUserId == userId,
-            cancellationToken);
-        if (schedule is null)
-        {
-            return ApiProblems.NotFound(httpContext, "Report schedule");
-        }
-
-        dbContext.ReportSchedules.Remove(schedule);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return TypedResults.NoContent();
-    }
-
-    internal static async Task<IResult> RunScheduleAsync(
-        Guid scheduleId,
+    private static async Task<IResult> ExportPdfAsync(
+        string reportType,
+        Guid? projectId,
+        DateTimeOffset? from,
+        DateTimeOffset? to,
+        TicketPriority? priority,
+        TicketType? type,
+        Guid? assigneeUserId,
+        bool? includeArchived,
+        AppLanguage? language,
         HttpContext httpContext,
         ReqNestDbContext dbContext,
         IReportPdfGenerator pdfGenerator,
         IBlobStorageService blobStorage,
         IOptions<BlobStorageOptions> storageOptions,
-        INotificationService notificationService,
         CancellationToken cancellationToken)
     {
         var authorization = httpContext.TenantAuthorization();
@@ -225,96 +117,22 @@ public static class ReportEndpoints
             return ApiProblems.TenantRequired(httpContext);
         }
 
-        var userId = httpContext.User.UserId();
-        var schedule = await dbContext.ReportSchedules.SingleOrDefaultAsync(
-            entity => entity.Id == scheduleId && entity.OwnerUserId == userId,
-            cancellationToken);
-        if (schedule is null)
-        {
-            return ApiProblems.NotFound(httpContext, "Report schedule");
-        }
-
-        var filter = JsonSerializer.Deserialize<ReportFilterRequest>(schedule.FilterSnapshotJson);
-        if (filter is null)
-        {
-            return ApiProblems.Conflict(httpContext, "The report schedule filter snapshot is invalid.");
-        }
-
-        schedule.LastRunAt = DateTimeOffset.UtcNow;
-        schedule.NextRunAt = NextRun(schedule.LastRunAt.Value, schedule.Frequency);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        if (schedule.Format == ReportExportFormat.Pdf)
-        {
-            return await ExportAsync(
-                new CreateReportExportRequest(schedule.ReportType, filter, schedule.Language),
-                httpContext,
-                dbContext,
-                pdfGenerator,
-                blobStorage,
-                storageOptions,
-                notificationService,
-                cancellationToken);
-        }
-
-        var result = await BuildReportAsync(schedule.ReportType, filter, httpContext, dbContext, cancellationToken);
-        if (result.Error is not null)
-        {
-            return result.Error;
-        }
-
-        var csv = BuildCsv(result.Report!, schedule.Language == AppLanguage.French);
-        var completedAt = schedule.LastRunAt ?? DateTimeOffset.UtcNow;
-        await notificationService.AddAsync(new NotificationMessage(
-            authorization.TenantId,
-            [schedule.OwnerUserId],
-            schedule.OwnerUserId,
-            NotificationType.ReportReady,
-            schedule.ProjectId,
-            null,
-            $"report-schedule-ready:{schedule.Id}:{completedAt:O}",
-            $"Scheduled report '{schedule.Name}' is ready.",
-            $"Le rapport planifié « {schedule.Name} » est prêt.",
-            "/app/reports",
-            schedule.Id.ToString(),
-            NotifyActor: true), cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return Results.File(
-            Encoding.UTF8.GetBytes(csv),
-            "text/csv; charset=utf-8",
-            $"reqnest-{schedule.ReportType}-{DateTimeOffset.UtcNow:yyyyMMddHHmmss}.csv");
-    }
-
-    private static async Task<IResult> ExportAsync(
-        CreateReportExportRequest request,
-        HttpContext httpContext,
-        ReqNestDbContext dbContext,
-        IReportPdfGenerator pdfGenerator,
-        IBlobStorageService blobStorage,
-        IOptions<BlobStorageOptions> storageOptions,
-        INotificationService notificationService,
-        CancellationToken cancellationToken)
-    {
-        var authorization = httpContext.TenantAuthorization();
-        if (authorization is null)
-        {
-            return ApiProblems.TenantRequired(httpContext);
-        }
-
-        var projectIds = request.Filter.ProjectId is null
+        var filter = new ReportFilterRequest(projectId, from, to, priority, type, assigneeUserId, includeArchived ?? false);
+        var accessibleProjectIds = filter.ProjectId is null
             ? authorization.ProjectRoles.Keys.Concat(authorization.ProjectPermissions.Keys).Distinct().ToArray()
-            : [request.Filter.ProjectId.Value];
-        var canExport = request.Filter.ProjectId is not null
-            ? authorization.CanExportReports(request.Filter.ProjectId.Value)
+            : [filter.ProjectId.Value];
+        var canExport = filter.ProjectId is not null
+            ? authorization.CanExportReports(filter.ProjectId.Value)
             : authorization.IsTenantAdministrator() ||
               authorization.HasTenantRole(AppRole.ProjectManager) ||
               authorization.AllProjectPermissions.Contains(AppPermission.ReportExport, StringComparer.Ordinal) ||
-              projectIds.Length > 0 && projectIds.All(authorization.CanExportReports);
+              accessibleProjectIds.Length > 0 && accessibleProjectIds.All(authorization.CanExportReports);
         if (!canExport)
         {
             return ApiProblems.Forbidden(httpContext);
         }
 
-        var result = await BuildReportAsync(request.ReportType, request.Filter, httpContext, dbContext, cancellationToken);
+        var result = await BuildReportAsync(reportType, filter, httpContext, dbContext, cancellationToken);
         if (result.Error is not null)
         {
             return result.Error;
@@ -324,7 +142,7 @@ public static class ReportEndpoints
         var tenant = await dbContext.Tenants.AsNoTracking().SingleAsync(cancellationToken);
         var user = await dbContext.Users.IgnoreQueryFilters().AsNoTracking()
             .SingleAsync(entity => entity.Id == httpContext.User.UserId(), cancellationToken);
-        var french = request.Language == AppLanguage.French;
+        var french = language == AppLanguage.French;
         var generatedAt = DateTimeOffset.UtcNow;
         byte[]? logoBytes = null;
         if (tenant.LogoBlobName is not null)
@@ -338,135 +156,92 @@ public static class ReportEndpoints
             logoBytes = logoBuffer.ToArray();
         }
 
-        var tableLines = new List<string>
+        string? projectName = null;
+        if (filter.ProjectId is not null)
         {
-            string.Join(" | ", report.Columns.Select(column => LocalizeColumn(column, french))),
-        };
-        tableLines.AddRange(report.Rows.Take(500).Select(row => string.Join(
-            " | ",
-            report.Columns.Select(column => LocalizeReportValue(row.GetValueOrDefault(column), french)))));
+            projectName = await dbContext.Projects.AsNoTracking()
+                .Where(entity => entity.Id == filter.ProjectId)
+                .Select(entity => entity.Name)
+                .SingleOrDefaultAsync(cancellationToken);
+            if (projectName is null)
+            {
+                return ApiProblems.NotFound(httpContext, "Project");
+            }
+        }
+
         var pdf = pdfGenerator.Generate(new ReportPdfContent(
             tenant.Name,
+            tenant.SupportContact,
             french ? report.TitleFrench : report.TitleEnglish,
-            french ? $"Généré : {generatedAt:u}" : $"Generated: {generatedAt:u}",
-            french ? $"Fuseau horaire : {tenant.TimeZone}" : $"Time zone: {tenant.TimeZone}",
-            french ? $"Demandé par : {user.DisplayName}" : $"Requested by: {user.DisplayName}",
-            french ? $"Filtres : {JsonSerializer.Serialize(request.Filter)}" : $"Filters: {JsonSerializer.Serialize(request.Filter)}",
+            french ? "Généré" : "Generated",
+            $"{generatedAt:yyyy-MM-dd HH:mm} UTC",
+            french ? "Fuseau horaire" : "Time zone",
+            tenant.TimeZone,
+            french ? "Demandé par" : "Requested by",
+            user.DisplayName,
+            french ? "Filtres" : "Filters",
+            DescribeFilter(filter, projectName, french),
             french ? "Définitions" : "Metric definitions",
             tenant.ReportFooterText ?? "ReqNest",
             french ? report.DefinitionsFrench : report.DefinitionsEnglish,
-            tableLines,
+            report.Columns.Select(column => LocalizeColumn(column, french)).ToArray(),
+            report.Rows.Take(500)
+                .Select(row => report.Columns
+                    .Select(column => LocalizeReportValue(row.GetValueOrDefault(column), french))
+                    .ToArray())
+                .ToArray(),
             logoBytes));
-        var export = new ReportExport
+        dbContext.AuditEvents.Add(new AuditEvent
         {
             TenantId = authorization.TenantId,
-            RequestedByUserId = user.Id,
-            ReportType = request.ReportType,
-            FilterSnapshotJson = JsonSerializer.Serialize(request.Filter),
-            Language = request.Language,
-            TimeZone = tenant.TimeZone,
-            Status = ReportExportStatus.Pending,
-            ExpiresAt = generatedAt.AddDays(7),
+            ActorUserId = user.Id,
+            Action = "report.export.ready",
+            TargetType = "Report",
+            TargetId = reportType,
+            Summary = "A PDF report was exported.",
+            CorrelationId = httpContext.TraceIdentifier,
+        });
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return Results.File(
+            pdf,
+            "application/pdf",
+            $"reqnest-{reportType}-{generatedAt:yyyyMMddHHmmss}.pdf");
+    }
+
+    private static string DescribeFilter(ReportFilterRequest filter, string? projectName, bool french)
+    {
+        var parts = new List<string>
+        {
+            filter.ProjectId is null
+                ? french ? "Tous les projets" : "All projects"
+                : projectName ?? (french ? "Projet sélectionné" : "Selected project"),
         };
-        dbContext.ReportExports.Add(export);
-        var options = storageOptions.Value;
-        var blobName = $"{authorization.TenantId:N}/reports/{export.Id:N}.pdf";
-        try
+        if (filter.From is not null)
         {
-            await using var stream = new MemoryStream(pdf, writable: false);
-            await blobStorage.UploadAsync(options.DefaultContainer, blobName, stream, "application/pdf", cancellationToken);
-            export.ContainerName = options.DefaultContainer;
-            export.BlobName = blobName;
-            export.Status = ReportExportStatus.Ready;
-            var audit = new AuditEvent
-            {
-                TenantId = authorization.TenantId,
-                ActorUserId = user.Id,
-                Action = "report.export.ready",
-                TargetType = nameof(ReportExport),
-                TargetId = export.Id.ToString(),
-                Summary = "A PDF report export was generated.",
-                CorrelationId = httpContext.TraceIdentifier,
-            };
-            dbContext.AuditEvents.Add(audit);
-            await notificationService.AddAsync(new NotificationMessage(
-                authorization.TenantId,
-                [user.Id],
-                user.Id,
-                NotificationType.ReportReady,
-                request.Filter.ProjectId,
-                null,
-                audit.Id.ToString(),
-                "Your PDF report is ready.",
-                "Votre rapport PDF est prêt.",
-                "/app/reports",
-                export.Id.ToString(),
-                NotifyActor: true), cancellationToken);
-            await dbContext.SaveChangesAsync(cancellationToken);
-        }
-        catch
-        {
-            await blobStorage.DeleteIfExistsAsync(options.DefaultContainer, blobName, cancellationToken);
-            throw;
+            parts.Add((french ? "Depuis " : "From ") + filter.From.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
         }
 
-        return TypedResults.Accepted($"/api/reports/exports/{export.Id}/download", ToResponse(export));
-    }
-
-    private static async Task<IResult> ListExportsAsync(
-        HttpContext httpContext,
-        ReqNestDbContext dbContext,
-        CancellationToken cancellationToken)
-    {
-        if (httpContext.TenantAuthorization() is null)
+        if (filter.To is not null)
         {
-            return ApiProblems.TenantRequired(httpContext);
+            parts.Add((french ? "Jusqu'au " : "To ") + filter.To.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
         }
 
-        var userId = httpContext.User.UserId();
-        var exports = await dbContext.ReportExports.AsNoTracking()
-            .Where(entity => entity.RequestedByUserId == userId)
-            .OrderByDescending(entity => entity.CreatedAt)
-            .Take(100)
-            .Select(entity => ToResponse(entity))
-            .ToArrayAsync(cancellationToken);
-        return TypedResults.Ok<IReadOnlyCollection<ReportExportResponse>>(exports);
-    }
-
-    private static async Task<IResult> DownloadExportAsync(
-        Guid exportId,
-        HttpContext httpContext,
-        ReqNestDbContext dbContext,
-        IBlobStorageService blobStorage,
-        CancellationToken cancellationToken)
-    {
-        if (httpContext.TenantAuthorization() is null)
+        if (filter.Priority is not null)
         {
-            return ApiProblems.TenantRequired(httpContext);
+            parts.Add((french ? "Priorité : " : "Priority: ") + filter.Priority);
         }
 
-        var export = await dbContext.ReportExports.SingleOrDefaultAsync(
-            entity => entity.Id == exportId && entity.RequestedByUserId == httpContext.User.UserId(),
-            cancellationToken);
-        if (export is null)
+        if (filter.Type is not null)
         {
-            return ApiProblems.NotFound(httpContext, "Report export");
+            parts.Add("Type: " + filter.Type);
         }
 
-        if (export.ExpiresAt <= DateTimeOffset.UtcNow)
+        if (filter.IncludeArchived)
         {
-            export.Status = ReportExportStatus.Expired;
-            await dbContext.SaveChangesAsync(cancellationToken);
-            return ApiProblems.NotFound(httpContext, "Report export");
+            parts.Add(french ? "Tickets archivés inclus" : "Includes archived tickets");
         }
 
-        if (export.Status != ReportExportStatus.Ready || export.ContainerName is null || export.BlobName is null)
-        {
-            return ApiProblems.Conflict(httpContext, "The report export is not ready.", "report_not_ready");
-        }
-
-        var stream = await blobStorage.OpenReadAsync(export.ContainerName, export.BlobName, cancellationToken);
-        return Results.Stream(stream, "application/pdf", $"reqnest-{export.ReportType}.pdf", enableRangeProcessing: true);
+        return string.Join("  ·  ", parts);
     }
 
     private static async Task<IResult> DashboardAsync(
@@ -567,8 +342,7 @@ public static class ReportEndpoints
                 entity.Id,
                 entity.ProjectId,
                 entity.Project.Key,
-                entity.Project.NameEnglish,
-                entity.Project.NameFrench,
+                entity.Project.Name,
                 entity.Key,
                 entity.Type,
                 entity.Priority,
@@ -872,83 +646,13 @@ public static class ReportEndpoints
     private static string CsvCell(string value) =>
         $"\"{value.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
 
-    private static IResult? ValidateSchedule(
-        UpsertReportScheduleRequest request,
-        TenantAuthorization? authorization,
-        HttpContext context)
-    {
-        if (authorization is null)
-        {
-            return ApiProblems.TenantRequired(context);
-        }
-
-        if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length > 160 ||
-            !ReportTypes.Contains(request.ReportType, StringComparer.Ordinal) ||
-            request.Filter.ValueKind != JsonValueKind.Object)
-        {
-            return ApiProblems.Validation(context, "The report schedule is invalid.");
-        }
-
-        if (request.ProjectId is not null && !authorization.CanExportReports(request.ProjectId.Value))
-        {
-            return ApiProblems.Forbidden(context);
-        }
-
-        return null;
-    }
-
-    private static void Apply(ReportSchedule schedule, UpsertReportScheduleRequest request)
-    {
-        schedule.ProjectId = request.ProjectId;
-        schedule.Name = request.Name.Trim();
-        schedule.ReportType = request.ReportType;
-        schedule.FilterSnapshotJson = request.Filter.GetRawText();
-        schedule.Language = request.Language;
-        schedule.Format = request.Format;
-        schedule.Frequency = request.Frequency;
-        schedule.IsActive = request.IsActive;
-        schedule.NextRunAt = request.NextRunAt > DateTimeOffset.UtcNow
-            ? request.NextRunAt
-            : NextRun(DateTimeOffset.UtcNow, request.Frequency);
-    }
-
-    private static DateTimeOffset NextRun(DateTimeOffset from, ReportScheduleFrequency frequency) => frequency switch
-    {
-        ReportScheduleFrequency.Daily => from.AddDays(1),
-        ReportScheduleFrequency.Weekly => from.AddDays(7),
-        ReportScheduleFrequency.Monthly => from.AddMonths(1),
-        _ => from.AddDays(1),
-    };
-
-    private static ReportScheduleResponse ToResponse(ReportSchedule entity) => new(
-        entity.Id,
-        entity.ProjectId,
-        entity.Name,
-        entity.ReportType,
-        entity.FilterSnapshotJson,
-        entity.Language,
-        entity.Format,
-        entity.Frequency,
-        entity.IsActive,
-        entity.NextRunAt,
-        entity.LastRunAt);
-
-    private static ReportExportResponse ToResponse(ReportExport entity) => new(
-        entity.Id,
-        entity.ReportType,
-        entity.Language,
-        entity.Status,
-        entity.ExpiresAt,
-        entity.CreatedAt);
-
     private sealed record ReportBuildResult(ReportResponse? Report, IResult? Error);
 
     private sealed record ReportTicketRow(
         Guid Id,
         Guid ProjectId,
         string ProjectKey,
-        string ProjectNameEnglish,
-        string ProjectNameFrench,
+        string ProjectName,
         string TicketKey,
         TicketType Type,
         TicketPriority Priority,
@@ -983,43 +687,6 @@ public sealed record ReportResponse(
     ReportFilterRequest Filter,
     bool Truncated,
     DateTimeOffset GeneratedAt);
-
-public sealed record CreateReportExportRequest(
-    string ReportType,
-    ReportFilterRequest Filter,
-    AppLanguage Language);
-
-public sealed record ReportExportResponse(
-    Guid Id,
-    string ReportType,
-    AppLanguage Language,
-    ReportExportStatus Status,
-    DateTimeOffset ExpiresAt,
-    DateTimeOffset CreatedAt);
-
-public sealed record UpsertReportScheduleRequest(
-    Guid? ProjectId,
-    string Name,
-    string ReportType,
-    JsonElement Filter,
-    AppLanguage Language,
-    ReportExportFormat Format,
-    ReportScheduleFrequency Frequency,
-    bool IsActive,
-    DateTimeOffset NextRunAt);
-
-public sealed record ReportScheduleResponse(
-    Guid Id,
-    Guid? ProjectId,
-    string Name,
-    string ReportType,
-    string FilterSnapshotJson,
-    AppLanguage Language,
-    ReportExportFormat Format,
-    ReportScheduleFrequency Frequency,
-    bool IsActive,
-    DateTimeOffset NextRunAt,
-    DateTimeOffset? LastRunAt);
 
 public sealed record DashboardTicketResponse(Guid Id, string Key, string Title, TicketPriority Priority, DateTimeOffset UpdatedAt);
 

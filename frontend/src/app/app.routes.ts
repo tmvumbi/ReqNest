@@ -19,12 +19,6 @@ export const routes: Routes = [
       import('./features/auth/auth-page/auth-page').then((module) => module.AuthPage),
   },
   {
-    path: 'register',
-    data: { mode: 'register' },
-    loadComponent: () =>
-      import('./features/auth/auth-page/auth-page').then((module) => module.AuthPage),
-  },
-  {
     path: 'forgot-password',
     data: { mode: 'reset' },
     loadComponent: () =>
@@ -46,11 +40,6 @@ export const routes: Routes = [
       ),
   },
   {
-    path: 'auth/sso',
-    loadComponent: () =>
-      import('./features/auth/sso-page/sso-page').then((module) => module.SsoPage),
-  },
-  {
     path: 'accept-invitation',
     data: { mode: 'invitation' },
     loadComponent: () =>
@@ -69,6 +58,20 @@ export const routes: Routes = [
           import('./features/dashboard/dashboard-page').then((module) => module.DashboardPage),
       },
       {
+        path: 'assistant',
+        loadComponent: () =>
+          import('./features/assistant/assistant-list-page').then(
+            (module) => module.AssistantListPage,
+          ),
+      },
+      {
+        path: 'assistant/:conversationId',
+        loadComponent: () =>
+          import('./features/assistant/assistant-chat-page').then(
+            (module) => module.AssistantChatPage,
+          ),
+      },
+      {
         path: 'tickets',
         loadComponent: () =>
           import('./features/tickets/ticket-list-page').then((module) => module.TicketListPage),
@@ -83,6 +86,11 @@ export const routes: Routes = [
         path: 'tickets/:ticketId',
         loadComponent: () =>
           import('./features/tickets/ticket-detail-page').then((module) => module.TicketDetailPage),
+      },
+      {
+        path: 'profile',
+        loadComponent: () =>
+          import('./features/profile/profile-page').then((module) => module.ProfilePage),
       },
       {
         path: 'projects',
@@ -100,6 +108,29 @@ export const routes: Routes = [
           import('./features/knowledge/knowledge-page').then((module) => module.KnowledgePage),
       },
       {
+        path: 'knowledge/new',
+        canActivate: [projectManagerGuard],
+        loadComponent: () =>
+          import('./features/knowledge/knowledge-editor-page').then(
+            (module) => module.KnowledgeEditorPage,
+          ),
+      },
+      {
+        path: 'knowledge/:articleId',
+        loadComponent: () =>
+          import('./features/knowledge/knowledge-detail-page').then(
+            (module) => module.KnowledgeDetailPage,
+          ),
+      },
+      {
+        path: 'knowledge/:articleId/edit',
+        canActivate: [projectManagerGuard],
+        loadComponent: () =>
+          import('./features/knowledge/knowledge-editor-page').then(
+            (module) => module.KnowledgeEditorPage,
+          ),
+      },
+      {
         path: 'notifications',
         loadComponent: () =>
           import('./features/notifications/notifications-page').then(
@@ -113,11 +144,35 @@ export const routes: Routes = [
           import('./features/admin/users/users-page').then((module) => module.UsersPage),
       },
       {
+        path: 'admin/users/invite',
+        canActivate: [projectManagerGuard],
+        loadComponent: () =>
+          import('./features/admin/users/users-invite-page').then(
+            (module) => module.UsersInvitePage,
+          ),
+      },
+      {
         path: 'admin/workflows',
         canActivate: [projectManagerGuard],
         loadComponent: () =>
           import('./features/admin/workflows/workflows-page').then(
             (module) => module.WorkflowsPage,
+          ),
+      },
+      {
+        path: 'admin/workflows/new',
+        canActivate: [projectManagerGuard],
+        loadComponent: () =>
+          import('./features/admin/workflows/workflow-editor-page').then(
+            (module) => module.WorkflowEditorPage,
+          ),
+      },
+      {
+        path: 'admin/workflows/:workflowId/edit',
+        canActivate: [projectManagerGuard],
+        loadComponent: () =>
+          import('./features/admin/workflows/workflow-editor-page').then(
+            (module) => module.WorkflowEditorPage,
           ),
       },
       {

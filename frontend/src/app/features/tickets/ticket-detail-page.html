@@ -5,21 +5,28 @@
   <p-message severity="error" role="alert">{{ i18n.text('common.error') }}</p-message>
 }
 @if (ticket(); as item) {
-  <header class="page-heading compact">
+  <a routerLink="/app/tickets" class="back-link">← {{ i18n.text('tickets.title') }}</a>
+  <header class="detail-header content-panel">
     <div>
-      <a routerLink="/app/tickets" class="back-link">← {{ i18n.text('tickets.title') }}</a>
-      <p class="eyebrow">{{ item.key }}</p>
-      <h1>{{ item.title }}</h1>
+      <div class="title-row">
+        <span class="ticket-key">{{ item.key }}</span>
+        <h1>{{ item.title }}</h1>
+      </div>
       <div class="ticket-meta">
-        <p-tag
-          [value]="i18n.language() === 'French' ? item.statusLabelFrench : item.statusLabelEnglish"
-          severity="secondary"
-        /><p-tag
-          [value]="i18n.ticketPriority(item.priority)"
-          [severity]="
-            item.priority === 'Urgent' ? 'danger' : item.priority === 'High' ? 'warn' : 'info'
-          "
-        /><span>{{ item.assigneeDisplayName || i18n.text('tickets.unassigned') }}</span>
+        <span class="pill" [class]="statusPillClass(item)">{{
+          item.statusLabel
+        }}</span>
+        <span class="pill" [class]="priorityPillClass(item.priority)">{{
+          i18n.ticketPriority(item.priority)
+        }}</span>
+        <span class="assignee-chip">
+          @if (item.assigneeDisplayName; as assignee) {
+            <span class="assignee-avatar" aria-hidden="true">{{ initials(assignee) }}</span
+            >{{ assignee }}
+          } @else {
+            {{ i18n.text('tickets.unassigned') }}
+          }
+        </span>
       </div>
     </div>
     <div class="heading-actions">
@@ -75,7 +82,7 @@
         <div class="section-heading">
           <h2>{{ i18n.text('tickets.description') }}</h2>
         </div>
-        <div class="rich-content" [innerHTML]="item.description"></div>
+        <div class="rich-content" [innerHTML]="item.description | richHtml"></div>
       </section>
       <section class="content-panel">
         <div class="section-heading">
@@ -84,15 +91,20 @@
         <div class="comment-list">
           @for (comment of comments(); track comment.id) {
             <article>
-              <header>
-                <strong>{{ comment.authorDisplayName }}</strong
-                ><time>{{ comment.createdAt | localizedDate: 'medium' }}</time>
-              </header>
-              @if (comment.isDeleted) {
-                <em>—</em>
-              } @else {
-                <div class="rich-content" [innerHTML]="comment.body"></div>
-              }
+              <span class="assignee-avatar comment-avatar" aria-hidden="true">{{
+                initials(comment.authorDisplayName)
+              }}</span>
+              <div class="comment-body">
+                <header>
+                  <strong>{{ comment.authorDisplayName }}</strong
+                  ><time>{{ comment.createdAt | localizedDate: 'medium' }}</time>
+                </header>
+                @if (comment.isDeleted) {
+                  <em>—</em>
+                } @else {
+                  <div class="rich-content" [innerHTML]="comment.body | richHtml"></div>
+                }
+              </div>
             </article>
           } @empty {
             <p class="state-message">{{ i18n.text('common.empty') }}</p>
@@ -232,7 +244,7 @@
           <div>
             <dt>{{ i18n.text('common.project') }}</dt>
             <dd>
-              {{ i18n.language() === 'French' ? item.projectNameFrench : item.projectNameEnglish }}
+              {{ item.projectName }}
             </dd>
           </div>
           <div>
@@ -393,7 +405,7 @@
           @for (article of knowledge(); track article.id) {
             <li>
               <strong>{{
-                i18n.language() === 'French' ? article.titleFrench : article.titleEnglish
+                article.title
               }}</strong
               ><p-tag [value]="article.status" />
             </li>

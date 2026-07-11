@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using ReqNest.Core.Assistant;
 using ReqNest.Core.Auditing;
 using ReqNest.Core.Common;
 using ReqNest.Core.Configuration;
@@ -116,6 +117,10 @@ public sealed class ReqNestDbContext(
 
     public DbSet<AiAssistanceRequest> AiAssistanceRequests => Set<AiAssistanceRequest>();
 
+    public DbSet<AiConversation> AiConversations => Set<AiConversation>();
+
+    public DbSet<AiChatMessage> AiChatMessages => Set<AiChatMessage>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ReqNestDbContext).Assembly);
@@ -215,6 +220,10 @@ public sealed class ReqNestDbContext(
         modelBuilder.Entity<AiTenantConfiguration>().HasQueryFilter(entity =>
             tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
         modelBuilder.Entity<AiAssistanceRequest>().HasQueryFilter(entity =>
+            tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
+        modelBuilder.Entity<AiConversation>().HasQueryFilter(entity =>
+            tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
+        modelBuilder.Entity<AiChatMessage>().HasQueryFilter(entity =>
             tenantContext.TenantId != null && entity.TenantId == tenantContext.TenantId);
     }
 

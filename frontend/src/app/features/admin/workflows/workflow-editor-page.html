@@ -1,0 +1,264 @@
+<p-confirmdialog [style]="{ width: '26rem' }" />
+<a routerLink="/app/admin/workflows" class="back-link">← {{ i18n.text('nav.workflows') }}</a>
+<header class="page-heading compact">
+  <div>
+    <h1>
+      {{
+        workflowId ? text('Edit workflow', 'Modifier le flux') : text('New workflow', 'Nouveau flux')
+      }}
+    </h1>
+    <p>
+      {{
+        text(
+          'Define the statuses, their order on the board, and the allowed transitions.',
+          "Définissez les statuts, leur ordre sur le tableau et les transitions autorisées."
+        )
+      }}
+    </p>
+  </div>
+</header>
+@if (error()) {
+  <p-message severity="error">{{ i18n.text('common.error') }}</p-message>
+}
+<div class="workflow-editor content-panel">
+  <div class="field-row">
+    <div class="field">
+      <label for="workflowName">{{ text('Name', 'Nom') }}</label
+      ><input pInputText id="workflowName" [(ngModel)]="draftName" />
+    </div>
+    @if (!editing()) {
+      <div class="field">
+        <label for="workflowProject">{{
+          text('Project-specific (optional)', 'Projet spécifique (facultatif)')
+        }}</label
+        ><p-select
+          inputId="workflowProject"
+          [(ngModel)]="draftProjectId"
+          [options]="projects()"
+          optionValue="id"
+          [showClear]="true"
+          ><ng-template #selectedItem let-project>{{
+            project ? projectName(project) : i18n.text('common.all')
+          }}</ng-template
+          ><ng-template #item let-project>{{ projectName(project) }}</ng-template></p-select
+        >
+      </div>
+    }
+  </div>
+  <div class="field">
+    <label for="workflowDescription">{{ i18n.text('projects.description') }}</label
+    ><textarea id="workflowDescription" [(ngModel)]="draftDescription" rows="2"></textarea>
+  </div>
+  <div class="section-heading">
+    <h3>{{ text('Statuses', 'Statuts') }}</h3>
+    <button
+      pButton
+      type="button"
+      size="small"
+      severity="secondary"
+      [outlined]="true"
+      (click)="addStatus()"
+    >
+      {{ text('Add status', 'Ajouter un statut') }}
+    </button>
+  </div>
+  <p class="hint">
+    {{
+      text(
+        'The order below is the column order on the board. Drag the handle or use the arrows to reorder.',
+        "L'ordre ci-dessous est celui des colonnes du tableau. Glissez la poignée ou utilisez les flèches pour réordonner."
+      )
+    }}
+  </p>
+  <div class="status-editor-list" cdkDropList (cdkDropListDropped)="dropStatus($event)">
+    @for (status of draftStatuses; track status; let index = $index) {
+      <fieldset cdkDrag [cdkDragData]="status">
+        <legend>
+          {{ index + 1 }} · {{ status.label || status.key }}
+          @if (statusTicketCount(status) > 0) {
+            <span class="usage-hint"
+              >· {{ statusTicketCount(status) }} {{ text('ticket(s)', 'ticket(s)') }}</span
+            >
+          }
+        </legend>
+        <div class="status-toolbar">
+          <span
+            class="drag-handle"
+            cdkDragHandle
+            [attr.aria-label]="text('Drag to reorder', 'Glisser pour réordonner')"
+            >⠿</span
+          >
+          <button
+            pButton
+            type="button"
+            size="small"
+            severity="secondary"
+            [text]="true"
+            [disabled]="index === 0"
+            [attr.aria-label]="text('Move up', 'Monter')"
+            (click)="moveStatus(index, -1)"
+          >
+            <app-icon name="chevron-down" [size]="15" class="up" />
+          </button>
+          <button
+            pButton
+            type="button"
+            size="small"
+            severity="secondary"
+            [text]="true"
+            [disabled]="index === draftStatuses.length - 1"
+            [attr.aria-label]="text('Move down', 'Descendre')"
+            (click)="moveStatus(index, 1)"
+          >
+            <app-icon name="chevron-down" [size]="15" />
+          </button>
+          <button
+            pButton
+            type="button"
+            size="small"
+            severity="danger"
+            [text]="true"
+            [disabled]="draftStatuses.length <= 2"
+            (click)="removeStatus(index)"
+          >
+            {{ text('Remove', 'Retirer') }}
+          </button>
+        </div>
+        <div class="status-fields">
+          <div class="field">
+            <label [for]="'statusKey' + index">{{ text('Stable key', 'Clé stable') }}</label
+            ><input
+              pInputText
+              [id]="'statusKey' + index"
+              [(ngModel)]="status.key"
+              [disabled]="isExistingKey(status.key)"
+            />
+          </div>
+          <div class="field">
+            <label [for]="'statusLabel' + index">{{ text('Label', 'Libellé') }}</label
+            ><input pInputText [id]="'statusLabel' + index" [(ngModel)]="status.label" />
+          </div>
+          <div class="field">
+            <label [for]="'statusCategory' + index">{{ text('Category', 'Catégorie') }}</label
+            ><p-select
+              [inputId]="'statusCategory' + index"
+              [(ngModel)]="status.category"
+              [options]="categories"
+              ><ng-template #selectedItem let-category>{{ categoryLabel(category) }}</ng-template
+              ><ng-template #item let-category>{{ categoryLabel(category) }}</ng-template></p-select
+            >
+          </div>
+          <div class="field color-field">
+            <label [for]="'statusColor' + index">{{ text('Color', 'Couleur') }}</label
+            ><input [id]="'statusColor' + index" type="color" [(ngModel)]="status.color" />
+          </div>
+        </div>
+        <div class="status-flags">
+          <label [for]="'statusInitial' + index"
+            ><p-checkbox
+              [inputId]="'statusInitial' + index"
+              [binary]="true"
+              [ngModel]="status.isInitial"
+              (ngModelChange)="$event && setInitial(index)"
+            />{{ text('Initial status', 'Statut initial') }}</label
+          ><label [for]="'statusTerminal' + index"
+            ><p-checkbox
+              [inputId]="'statusTerminal' + index"
+              [binary]="true"
+              [(ngModel)]="status.isTerminal"
+            />{{ text('Terminal', 'Terminal') }}</label
+          >
+        </div>
+      </fieldset>
+    }
+  </div>
+  @if (removedStatuses().length) {
+    <section class="mapping-panel">
+      <h3>{{ text('Removed status mapping', 'Correspondance des statuts supprimés') }}</h3>
+      <p>
+        {{
+          text(
+            'Choose where existing tickets move before saving.',
+            'Choisissez où déplacer les tickets existants avant l’enregistrement.'
+          )
+        }}
+      </p>
+      @for (removed of removedStatuses(); track removed.id) {
+        <div class="mapping-row">
+          <strong>{{ label(removed) }}</strong
+          ><span aria-hidden="true">→</span
+          ><p-select [(ngModel)]="statusMappings[removed.key]" [options]="draftStatuses"
+            ><ng-template #selectedItem let-status>{{
+              status ? status.label || status.key : ''
+            }}</ng-template
+            ><ng-template #item let-status>{{ status.label || status.key }}</ng-template></p-select
+          >
+        </div>
+      }
+    </section>
+  }
+  <div class="section-heading">
+    <h3>{{ text('Allowed transitions', 'Transitions autorisées') }}</h3>
+    <button
+      pButton
+      type="button"
+      size="small"
+      severity="secondary"
+      [outlined]="true"
+      (click)="addTransition()"
+    >
+      {{ text('Add transition', 'Ajouter une transition') }}
+    </button>
+  </div>
+  <div class="transition-editor-list">
+    @for (transition of draftTransitions; track $index; let index = $index) {
+      <div class="transition-row">
+        <p-select [(ngModel)]="transition.from" [options]="draftStatuses"
+          ><ng-template #selectedItem let-status>{{
+            status ? status.label || status.key : ''
+          }}</ng-template
+          ><ng-template #item let-status>{{ status.label || status.key }}</ng-template></p-select
+        ><span aria-hidden="true">→</span
+        ><p-select [(ngModel)]="transition.to" [options]="draftStatuses"
+          ><ng-template #selectedItem let-status>{{
+            status ? status.label || status.key : ''
+          }}</ng-template
+          ><ng-template #item let-status>{{ status.label || status.key }}</ng-template></p-select
+        ><input
+          pInputText
+          [(ngModel)]="transition.name"
+          [placeholder]="text('Name (optional)', 'Nom (facultatif)')"
+        /><label [for]="'transitionComment' + index"
+          ><p-checkbox
+            [inputId]="'transitionComment' + index"
+            [binary]="true"
+            [(ngModel)]="transition.commentRequired"
+          />{{ text('Comment required', 'Commentaire requis') }}</label
+        ><button
+          pButton
+          type="button"
+          size="small"
+          severity="danger"
+          [text]="true"
+          (click)="removeTransition(index)"
+        >
+          {{ text('Remove', 'Retirer') }}
+        </button>
+      </div>
+    }
+  </div>
+  <div class="form-actions">
+    <a pButton severity="secondary" [outlined]="true" routerLink="/app/admin/workflows">{{
+      i18n.text('common.cancel')
+    }}</a
+    ><button
+      pButton
+      type="button"
+      [disabled]="!validDraft()"
+      [loading]="saving()"
+      (click)="saveWorkflow()"
+    >
+      {{ i18n.text('common.save') }}
+    </button>
+  </div>
+</div>

@@ -1,11 +1,13 @@
 import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
-import { MessageModule } from 'primeng/message';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
@@ -17,7 +19,9 @@ import {
   Project,
   RetentionSettings,
   SlaPolicy,
+  TicketPriorityDefinition,
   TicketSchema,
+  TicketTypeDefinition,
 } from '../../../core/api/api-models';
 import { I18nService } from '../../../core/i18n/i18n.service';
 import { LocalizedDatePipe } from '../../../core/i18n/localized-date.pipe';
@@ -29,20 +33,23 @@ import { LocalizedDatePipe } from '../../../core/i18n/localized-date.pipe';
     LocalizedDatePipe,
     FormsModule,
     ButtonModule,
+    ConfirmDialogModule,
     InputNumberModule,
     InputTextModule,
-    MessageModule,
     MultiSelectModule,
     SelectModule,
     TableModule,
     TagModule,
   ],
+  providers: [ConfirmationService],
   templateUrl: './operations-page.html',
   styleUrl: './operations-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class OperationsPage {
   private readonly api = inject(ApiClient);
+  private readonly confirmation = inject(ConfirmationService);
+  private readonly messages = inject(MessageService);
   readonly i18n = inject(I18nService);
   readonly projects = signal<Project[]>([]);
   readonly schema = signal<TicketSchema | null>(null);
@@ -50,27 +57,27 @@ export class OperationsPage {
   readonly customRoles = signal<CustomRole[]>([]);
   readonly retention = signal<RetentionSettings | null>(null);
   readonly outbox = signal<EmailOutboxPage['items']>([]);
-  readonly success = signal('');
-  readonly error = signal('');
   readonly busy = signal(false);
+  editingDefinitionId = '';
+  editingLabel = '';
+  editingColor = '#64748b';
 
   configProjectId = '';
   typeKey = '';
   typeEnglish = '';
-  typeFrench = '';
   priorityKey = '';
   priorityEnglish = '';
-  priorityFrench = '';
   priorityColor = '#DC2626';
   fieldKey = '';
   fieldEnglish = '';
-  fieldFrench = '';
   fieldKind: 'Text' | 'Number' | 'Date' | 'Boolean' | 'Choice' = 'Text';
   fieldRequired = false;
   fieldOptions = '';
+  fieldProjectIds: string[] = [];
   slaName = '';
   slaTimeZone = 'Africa/Johannesburg';
   slaWarning = 60;
+  slaProjectIds: string[] = [];
   roleName = '';
   rolePermissions: string[] = [];
   readonly fieldKinds = ['Text', 'Number', 'Date', 'Boolean', 'Choice'];
@@ -104,14 +111,104 @@ export class OperationsPage {
         this.api.createTicketType({
           projectId: this.configProjectId || null,
           key: this.typeKey.trim().toUpperCase(),
-          labelEnglish: this.typeEnglish,
-          labelFrench: this.typeFrench,
+          label: this.typeEnglish,
           order: (this.schema()?.types.length ?? 0) + 10,
           isActive: true,
         }),
       );
-      this.typeKey = this.typeEnglish = this.typeFrench = '';
+      this.typeKey = this.typeEnglish = '';
       await this.changeScope();
+    });
+  }
+
+  startEdit(item: TicketTypeDefinition | TicketPriorityDefinition): void {
+    this.editingDefinitionId = item.id;
+    this.editingLabel = item.label;
+    this.editingColor = 'color' in item ? item.color : '#64748b';
+  }
+
+  cancelEdit(): void {
+    this.editingDefinitionId = '';
+  }
+
+  async saveType(item: TicketTypeDefinition): Promise<void> {
+    const label = this.editingLabel.trim();
+    if (!label) return;
+    await this.run(async () => {
+      await firstValueFrom(
+        this.api.updateTicketType(item.id, {
+          projectId: item.projectId,
+          key: item.key,
+          label,
+          order: item.order,
+          isActive: item.isActive,
+        }),
+      );
+      this.cancelEdit();
+      await this.changeScope();
+    });
+  }
+
+  async savePriority(item: TicketPriorityDefinition): Promise<void> {
+    const label = this.editingLabel.trim();
+    if (!label) return;
+    await this.run(async () => {
+      await firstValueFrom(
+        this.api.updateTicketPriority(item.id, {
+          projectId: item.projectId,
+          key: item.key,
+          label,
+          color: this.editingColor,
+          weight: item.weight,
+          order: item.order,
+          isActive: item.isActive,
+        }),
+      );
+      this.cancelEdit();
+      await this.changeScope();
+    });
+  }
+
+  deleteType(item: TicketTypeDefinition): void {
+    this.confirmDelete(item.label, async () => {
+      await firstValueFrom(this.api.deleteTicketType(item.id));
+      await this.changeScope();
+    });
+  }
+
+  deletePriority(item: TicketPriorityDefinition): void {
+    this.confirmDelete(item.label, async () => {
+      await firstValueFrom(this.api.deleteTicketPriority(item.id));
+      await this.changeScope();
+    });
+  }
+
+  private confirmDelete(label: string, action: () => Promise<void>): void {
+    const french = this.i18n.language() === 'French';
+    this.confirmation.confirm({
+      header: french ? 'Supprimer la définition' : 'Delete definition',
+      message: french ? `Supprimer « ${label} » ?` : `Delete "${label}"?`,
+      acceptLabel: french ? 'Supprimer' : 'Delete',
+      rejectLabel: this.i18n.text('common.cancel'),
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: async () => {
+        this.busy.set(true);
+        try {
+          await action();
+          this.notify('success', french ? 'Définition supprimée.' : 'Definition deleted.');
+        } catch (errorResponse) {
+          this.notify(
+            'error',
+            errorResponse instanceof HttpErrorResponse && errorResponse.status === 409
+              ? french
+                ? 'Cette définition est utilisée par des tickets existants et ne peut pas être supprimée.'
+                : 'This definition is used by existing tickets and cannot be deleted.'
+              : this.i18n.text('common.error'),
+          );
+        } finally {
+          this.busy.set(false);
+        }
+      },
     });
   }
 
@@ -121,15 +218,14 @@ export class OperationsPage {
         this.api.createTicketPriority({
           projectId: this.configProjectId || null,
           key: this.priorityKey.trim().toUpperCase(),
-          labelEnglish: this.priorityEnglish,
-          labelFrench: this.priorityFrench,
+          label: this.priorityEnglish,
           color: this.priorityColor,
           weight: 50,
           order: (this.schema()?.priorities.length ?? 0) + 10,
           isActive: true,
         }),
       );
-      this.priorityKey = this.priorityEnglish = this.priorityFrench = '';
+      this.priorityKey = this.priorityEnglish = '';
       await this.changeScope();
     });
   }
@@ -145,10 +241,9 @@ export class OperationsPage {
           : [];
       await firstValueFrom(
         this.api.createCustomField({
-          projectId: this.configProjectId || null,
+          projectIds: this.fieldProjectIds,
           key: this.fieldKey.trim().toUpperCase(),
-          labelEnglish: this.fieldEnglish,
-          labelFrench: this.fieldFrench,
+          label: this.fieldEnglish,
           kind: this.fieldKind,
           isRequired: this.fieldRequired,
           isActive: true,
@@ -156,19 +251,20 @@ export class OperationsPage {
           options,
         }),
       );
-      this.fieldKey = this.fieldEnglish = this.fieldFrench = this.fieldOptions = '';
+      this.fieldKey = this.fieldEnglish = this.fieldOptions = '';
+      this.fieldProjectIds = [];
       await this.changeScope();
     });
   }
 
   async addSla(): Promise<void> {
     await this.run(async () => {
-      const policy = await firstValueFrom(
+      await firstValueFrom(
         this.api.createSlaPolicy({
-          projectId: this.configProjectId || null,
+          projectIds: this.slaProjectIds,
           name: this.slaName,
           timeZone: this.slaTimeZone,
-          isDefault: !this.configProjectId,
+          isDefault: this.slaProjectIds.length === 0,
           isActive: true,
           workingDaysMask: 62,
           businessDayStartMinutes: 480,
@@ -185,10 +281,8 @@ export class OperationsPage {
           holidays: [],
         }),
       );
-      if (this.configProjectId) {
-        await firstValueFrom(this.api.assignSlaPolicy(policy.id, this.configProjectId));
-      }
       this.slaName = '';
+      this.slaProjectIds = [];
       this.slaPolicies.set(await firstValueFrom(this.api.slaPolicies()));
     });
   }
@@ -242,12 +336,22 @@ export class OperationsPage {
     });
   }
 
-  label(item: { labelEnglish: string; labelFrench: string }): string {
-    return this.i18n.language() === 'French' ? item.labelFrench : item.labelEnglish;
+  label(item: { label: string }): string {
+    return item.label;
   }
 
   projectName(project: Project): string {
-    return this.i18n.language() === 'French' ? project.nameFrench : project.nameEnglish;
+    return project.name;
+  }
+
+  projectSetLabel(projectIds: string[]): string {
+    if (!projectIds.length) {
+      return this.i18n.language() === 'French' ? 'Tous les projets' : 'All projects';
+    }
+    const names = this.projects()
+      .filter((project) => projectIds.includes(project.id))
+      .map((project) => project.name);
+    return names.length ? names.join(', ') : '—';
   }
 
   private async load(): Promise<void> {
@@ -267,23 +371,26 @@ export class OperationsPage {
       this.retention.set(retention);
       this.outbox.set(outbox.items);
     } catch {
-      this.error.set(this.i18n.text('common.error'));
+      this.notify('error', this.i18n.text('common.error'));
     }
   }
 
   private async run(action: () => Promise<void>): Promise<void> {
     this.busy.set(true);
-    this.error.set('');
-    this.success.set('');
     try {
       await action();
-      this.success.set(
+      this.notify(
+        'success',
         this.i18n.language() === 'French' ? 'Modifications enregistrées.' : 'Changes saved.',
       );
     } catch {
-      this.error.set(this.i18n.text('common.error'));
+      this.notify('error', this.i18n.text('common.error'));
     } finally {
       this.busy.set(false);
     }
+  }
+
+  private notify(severity: 'success' | 'error', summary: string): void {
+    this.messages.add({ severity, summary, life: severity === 'success' ? 4000 : 6000 });
   }
 }

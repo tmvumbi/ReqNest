@@ -19,9 +19,8 @@ public sealed class TicketTypeDefinition : Entity
 
     public string Key { get; set; } = string.Empty;
 
-    public string LabelEnglish { get; set; } = string.Empty;
+    public string Label { get; set; } = string.Empty;
 
-    public string LabelFrench { get; set; } = string.Empty;
 
     public int Order { get; set; }
 
@@ -36,9 +35,8 @@ public sealed class TicketPriorityDefinition : Entity
 
     public string Key { get; set; } = string.Empty;
 
-    public string LabelEnglish { get; set; } = string.Empty;
+    public string Label { get; set; } = string.Empty;
 
-    public string LabelFrench { get; set; } = string.Empty;
 
     public string Color { get; set; } = "#64748b";
 
@@ -53,13 +51,13 @@ public sealed class CustomFieldDefinition : Entity
 {
     public Guid TenantId { get; set; }
 
-    public Guid? ProjectId { get; set; }
+    // Empty means the field applies to every project.
+    public Guid[] ProjectIds { get; set; } = [];
 
     public string Key { get; set; } = string.Empty;
 
-    public string LabelEnglish { get; set; } = string.Empty;
+    public string Label { get; set; } = string.Empty;
 
-    public string LabelFrench { get; set; } = string.Empty;
 
     public CustomFieldKind Kind { get; set; }
 
@@ -87,7 +85,8 @@ public sealed class SlaPolicy : Entity
 {
     public Guid TenantId { get; set; }
 
-    public Guid? ProjectId { get; set; }
+    // Empty means the policy applies to every project.
+    public Guid[] ProjectIds { get; set; } = [];
 
     public string Name { get; set; } = string.Empty;
 

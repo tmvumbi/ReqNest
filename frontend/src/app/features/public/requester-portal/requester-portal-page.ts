@@ -15,6 +15,7 @@ import {
   PublicPortal,
   RequesterTicket,
 } from '../../../core/api/api-models';
+import { RichHtmlPipe } from '../../../core/content/rich-html.pipe';
 import { I18nService } from '../../../core/i18n/i18n.service';
 import { LocalizedDatePipe } from '../../../core/i18n/localized-date.pipe';
 import { ThemeService } from '../../../core/theme/theme.service';
@@ -30,6 +31,7 @@ import { ThemeService } from '../../../core/theme/theme.service';
     SelectModule,
     TextareaModule,
     LocalizedDatePipe,
+    RichHtmlPipe,
   ],
   templateUrl: './requester-portal-page.html',
   styleUrl: './requester-portal-page.scss',
@@ -66,7 +68,7 @@ export class RequesterPortalPage {
     return this.i18n.language() === 'French' ? fr : en;
   }
   projectName(project: PublicPortal['projects'][number]): string {
-    return this.text(project.nameEnglish, project.nameFrench);
+    return project.name;
   }
 
   async submit(): Promise<void> {

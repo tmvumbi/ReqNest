@@ -1,12 +1,12 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
 import { TextareaModule } from 'primeng/textarea';
 import { ApiClient } from '../../core/api/api-client';
 import {
@@ -23,12 +23,12 @@ import { SessionStore } from '../../core/session/session-store';
   selector: 'app-projects-page',
   imports: [
     ReactiveFormsModule,
+    RouterLink,
     ButtonModule,
     DialogModule,
     InputTextModule,
     SelectModule,
     TableModule,
-    TagModule,
     TextareaModule,
   ],
   templateUrl: './projects-page.html',
@@ -52,8 +52,7 @@ export class ProjectsPage {
   readonly priorities: TicketPriority[] = ['Low', 'Normal', 'High', 'Urgent'];
   readonly form = this.formBuilder.nonNullable.group({
     key: ['', [Validators.required, Validators.pattern(/^[A-Za-z0-9_]{2,12}$/)]],
-    nameEnglish: ['', Validators.required],
-    nameFrench: ['', Validators.required],
+    name: ['', Validators.required],
     description: [''],
     workflowId: [''],
     defaultPriority: ['Normal' as TicketPriority],
@@ -68,8 +67,7 @@ export class ProjectsPage {
     this.editing.set(null);
     this.form.reset({
       key: '',
-      nameEnglish: '',
-      nameFrench: '',
+      name: '',
       description: '',
       workflowId: '',
       defaultPriority: 'Normal',
@@ -83,8 +81,7 @@ export class ProjectsPage {
     this.editing.set(project);
     this.form.reset({
       key: project.key,
-      nameEnglish: project.nameEnglish,
-      nameFrench: project.nameFrench,
+      name: project.name,
       description: project.description ?? '',
       workflowId: project.workflowId,
       defaultPriority: project.defaultPriority,
@@ -104,8 +101,7 @@ export class ProjectsPage {
       if (editing)
         await firstValueFrom(
           this.api.updateProject(editing.id, {
-            nameEnglish: value.nameEnglish,
-            nameFrench: value.nameFrench,
+            name: value.name,
             description: value.description || null,
             defaultPriority: value.defaultPriority,
             defaultAssigneeUserId: value.defaultAssigneeUserId || null,
@@ -148,7 +144,7 @@ export class ProjectsPage {
   }
 
   name(project: Project): string {
-    return this.i18n.language() === 'French' ? project.nameFrench : project.nameEnglish;
+    return project.name;
   }
   workflowName(id: string): string {
     return this.workflows().find((workflow) => workflow.id === id)?.name ?? '—';

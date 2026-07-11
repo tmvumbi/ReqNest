@@ -8,7 +8,7 @@
     <button pButton type="button" (click)="openCreate()">{{ i18n.text('projects.new') }}</button>
   }
 </header>
-<section class="content-panel">
+<section class="content-panel table-panel">
   <p-table
     [value]="projects()"
     [loading]="loading()"
@@ -34,42 +34,41 @@
         <td>{{ workflowName(project.workflowId) }}</td>
         <td>{{ i18n.ticketPriority(project.defaultPriority) }}</td>
         <td>
-          <p-tag
-            [value]="
-              project.isArchived ? i18n.text('projects.archived') : i18n.text('projects.active')
-            "
-            [severity]="project.isArchived ? 'secondary' : 'success'"
-          />
+          <span class="pill" [class]="project.isArchived ? 'pill-slate' : 'pill-green'">{{
+            project.isArchived ? i18n.text('projects.archived') : i18n.text('projects.active')
+          }}</span>
         </td>
         <td>
-          <button
-            pButton
-            type="button"
-            [text]="true"
-            severity="secondary"
-            (click)="showOverview(project)"
-          >
-            {{ i18n.language() === 'French' ? 'Aperçu' : 'Overview' }}
-          </button>
-          @if (store.canManageProjects()) {
+          <div class="row-actions">
             <button
               pButton
               type="button"
               [text]="true"
               severity="secondary"
-              (click)="openEdit(project)"
+              (click)="showOverview(project)"
             >
-              {{ i18n.text('common.edit') }}</button
-            ><button
-              pButton
-              type="button"
-              [text]="true"
-              severity="secondary"
-              (click)="toggleArchived(project)"
-            >
-              {{ project.isArchived ? i18n.text('common.restore') : i18n.text('common.archive') }}
+              {{ i18n.language() === 'French' ? 'Aperçu' : 'Overview' }}
             </button>
-          }
+            @if (store.canManageProjects()) {
+              <button
+                pButton
+                type="button"
+                [text]="true"
+                severity="secondary"
+                (click)="openEdit(project)"
+              >
+                {{ i18n.text('common.edit') }}</button
+              ><button
+                pButton
+                type="button"
+                [text]="true"
+                severity="secondary"
+                (click)="toggleArchived(project)"
+              >
+                {{ project.isArchived ? i18n.text('common.restore') : i18n.text('common.archive') }}
+              </button>
+            }
+          </div>
         </td>
       </tr></ng-template
     >
@@ -92,15 +91,9 @@
       <label for="projectKey">{{ i18n.text('projects.key') }}</label
       ><input pInputText id="projectKey" formControlName="key" maxlength="12" />
     </div>
-    <div class="field-row">
-      <div class="field">
-        <label for="projectEnglish">{{ i18n.text('projects.nameEnglish') }}</label
-        ><input pInputText id="projectEnglish" formControlName="nameEnglish" />
-      </div>
-      <div class="field">
-        <label for="projectFrench">{{ i18n.text('projects.nameFrench') }}</label
-        ><input pInputText id="projectFrench" formControlName="nameFrench" />
-      </div>
+    <div class="field">
+      <label for="projectName">{{ i18n.text('projects.name') }}</label
+      ><input pInputText id="projectName" formControlName="name" />
     </div>
     <div class="field">
       <label for="projectDescription">{{ i18n.text('projects.description') }}</label
@@ -175,26 +168,30 @@
         <strong>{{ data.unassigned }}</strong
         ><span>{{ i18n.text('tickets.unassigned') }}</span>
       </article>
-      <article>
+      <article [class.alarming]="data.overdue > 0">
         <strong>{{ data.overdue }}</strong
         ><span>{{ i18n.text('tickets.overdue') }}</span>
       </article>
     </div>
     <h3>{{ i18n.text('common.status') }}</h3>
-    <ul>
+    <ul class="overview-list">
       @for (status of data.byStatus; track status.statusId) {
         <li>
-          {{ i18n.language() === 'French' ? status.labelFrench : status.labelEnglish }} ·
-          {{ status.count }}
+          <span>{{ status.label }}</span>
+          <strong>{{ status.count }}</strong>
         </li>
       }
     </ul>
     <h3>{{ i18n.language() === 'French' ? 'Tickets récents' : 'Recent tickets' }}</h3>
-    <ul>
+    <ul class="overview-list">
       @for (ticket of data.recentlyUpdated; track ticket.id) {
-        <li>{{ ticket.key }} · {{ ticket.title }}</li>
+        <li>
+          <a [routerLink]="['/app/tickets', ticket.id]" (click)="overviewVisible.set(false)"
+            ><span class="recent-key">{{ ticket.key }}</span> {{ ticket.title }}</a
+          >
+        </li>
       } @empty {
-        <li>{{ i18n.text('common.empty') }}</li>
+        <li class="state-message">{{ i18n.text('common.empty') }}</li>
       }
     </ul>
   }

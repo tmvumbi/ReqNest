@@ -34,6 +34,21 @@
   border: 1px solid var(--app-border);
   border-radius: 0.6rem;
 }
+.definition-list li .row-actions {
+  margin-left: auto;
+}
+.definition-list .edit-label {
+  flex: 1;
+  min-width: 0;
+}
+.definition-list .edit-color {
+  width: 2.4rem;
+  height: 2.2rem;
+  flex-shrink: 0;
+  border: 1px solid var(--app-border);
+  border-radius: 0.4rem;
+  background: var(--app-surface);
+}
 .policy-list article span,
 .role-list article span {
   flex: 1;
@@ -61,10 +76,14 @@ code {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.8rem;
 }
-.retention-grid label {
+.retention-field {
   display: grid;
   gap: 0.35rem;
-  font-weight: 700;
+}
+.retention-field label {
+  color: var(--app-text-muted);
+  font-size: 0.78rem;
+  font-weight: 650;
 }
 .actions {
   display: flex;

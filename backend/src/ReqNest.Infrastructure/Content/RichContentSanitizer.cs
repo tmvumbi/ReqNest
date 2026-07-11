@@ -8,7 +8,8 @@ public sealed class RichContentSanitizer : IRichContentSanitizer
 {
     private static readonly string[] AllowedTags =
     [
-        "p", "br", "strong", "b", "em", "i", "s", "h2", "h3", "h4", "ol", "ul", "li",
+        "p", "br", "strong", "b", "em", "i", "u", "s", "sub", "sup", "span",
+        "h1", "h2", "h3", "h4", "ol", "ul", "li",
         "code", "pre", "blockquote", "a", "table", "thead", "tbody", "tr", "th", "td",
     ];
 
@@ -28,7 +29,12 @@ public sealed class RichContentSanitizer : IRichContentSanitizer
 
     private static HtmlSanitizer CreateSanitizer()
     {
-        var sanitizer = new HtmlSanitizer();
+        var sanitizer = new HtmlSanitizer
+        {
+            // Unknown tags are unwrapped instead of deleted so the text survives
+            // even when an editor emits markup outside the allow-list.
+            KeepChildNodes = true,
+        };
         sanitizer.AllowedTags.Clear();
         foreach (var tag in AllowedTags)
         {
@@ -37,6 +43,13 @@ public sealed class RichContentSanitizer : IRichContentSanitizer
 
         sanitizer.AllowedAttributes.Clear();
         sanitizer.AllowedAttributes.Add("href");
+        sanitizer.AllowedAttributes.Add("class");
+        sanitizer.AllowedAttributes.Add("style");
+        sanitizer.AllowedAttributes.Add("data-list");
+        sanitizer.AllowedCssProperties.Clear();
+        sanitizer.AllowedCssProperties.Add("color");
+        sanitizer.AllowedCssProperties.Add("background-color");
+        sanitizer.AllowedCssProperties.Add("text-align");
         sanitizer.AllowedSchemes.Clear();
         sanitizer.AllowedSchemes.Add("http");
         sanitizer.AllowedSchemes.Add("https");

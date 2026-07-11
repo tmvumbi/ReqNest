@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
@@ -8,7 +8,6 @@ import { InputTextModule } from 'primeng/inputtext';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { ApiClient } from '../../../core/api/api-client';
 import { AppRole, CustomRole, Member, Project } from '../../../core/api/api-models';
@@ -25,7 +24,7 @@ import { I18nService } from '../../../core/i18n/i18n.service';
     MultiSelectModule,
     SelectModule,
     TableModule,
-    TagModule,
+
     ToggleSwitchModule,
   ],
   templateUrl: './users-page.html',
@@ -39,19 +38,11 @@ export class UsersPage {
   readonly members = signal<Member[]>([]);
   readonly projects = signal<Project[]>([]);
   readonly customRoles = signal<CustomRole[]>([]);
-  readonly visible = signal(false);
   readonly manageVisible = signal(false);
   readonly selectedMember = signal<Member | null>(null);
   readonly submitting = signal(false);
   readonly developmentInvitation = signal<string | null>(null);
   readonly roles: AppRole[] = ['TenantAdministrator', 'ProjectManager', 'Contributor', 'Observer'];
-  readonly form = this.formBuilder.nonNullable.group({
-    email: ['', [Validators.required, Validators.email]],
-    displayName: [''],
-    role: ['Contributor' as AppRole],
-    allProjects: [true],
-    projectIds: [[] as string[]],
-  });
   readonly manageForm = this.formBuilder.nonNullable.group({
     role: ['Contributor' as AppRole],
     allProjects: [true],
@@ -61,33 +52,6 @@ export class UsersPage {
 
   constructor() {
     void this.load();
-  }
-  async invite(): Promise<void> {
-    this.form.markAllAsTouched();
-    if (this.form.invalid || this.submitting()) return;
-    const value = this.form.getRawValue();
-    if (!value.allProjects && value.projectIds.length === 0) return;
-    this.submitting.set(true);
-    try {
-      const result = await firstValueFrom(
-        this.api.invite({
-          email: value.email,
-          displayName: value.displayName,
-          grants: [
-            {
-              role: value.role,
-              allProjects: value.allProjects,
-              projectIds: value.allProjects ? [] : value.projectIds,
-            },
-          ],
-        }),
-      );
-      this.developmentInvitation.set(result.developmentToken);
-      await this.load();
-      if (!result.developmentToken) this.visible.set(false);
-    } finally {
-      this.submitting.set(false);
-    }
   }
   grants(member: Member): string {
     return member.grants
@@ -115,6 +79,10 @@ export class UsersPage {
   statusLabel(status: Member['status']): string {
     if (this.i18n.language() !== 'French') return status;
     return { Invited: 'Invité', Active: 'Actif', Deactivated: 'Désactivé' }[status];
+  }
+  initials(name: string): string {
+    const parts = name.trim().split(/\s+/);
+    return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '?';
   }
   openManage(member: Member): void {
     const grant = member.grants[0];
@@ -175,7 +143,7 @@ export class UsersPage {
     await this.load();
   }
   projectName(project: Project): string {
-    return this.i18n.language() === 'French' ? project.nameFrench : project.nameEnglish;
+    return project.name;
   }
   private async load(): Promise<void> {
     const [members, projects, customRoles] = await Promise.all([

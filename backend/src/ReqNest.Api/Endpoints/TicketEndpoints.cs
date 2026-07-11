@@ -134,15 +134,13 @@ public static class TicketEndpoints
                 entity.Id,
                 entity.Key,
                 entity.ProjectId,
-                entity.Project.NameEnglish,
-                entity.Project.NameFrench,
+                entity.Project.Name,
                 entity.Title,
                 entity.Type,
                 entity.Priority,
                 entity.WorkflowStatusId,
                 entity.WorkflowStatus.Key,
-                entity.WorkflowStatus.LabelEnglish,
-                entity.WorkflowStatus.LabelFrench,
+                entity.WorkflowStatus.Label,
                 entity.AssigneeUserId,
                 entity.AssigneeUser == null ? null : entity.AssigneeUser.DisplayName,
                 entity.ReporterDisplayNameSnapshot,
@@ -338,7 +336,6 @@ public static class TicketEndpoints
                 ticket.Id,
                 audit.Id.ToString(),
                 $"{ticket.Key} was assigned to you.",
-                $"{ticket.Key} vous a été attribué.",
                 $"/app/tickets/{ticket.Id}",
                 ticket.Id.ToString()), cancellationToken);
         }
@@ -527,7 +524,6 @@ public static class TicketEndpoints
                 ticket.Id,
                 audit.Id.ToString(),
                 $"{ticket.Key} was assigned to you.",
-                $"{ticket.Key} vous a été attribué.",
                 $"/app/tickets/{ticket.Id}",
                 ticket.Id.ToString()), cancellationToken);
         }
@@ -543,7 +539,6 @@ public static class TicketEndpoints
                 ticket.Id,
                 $"{audit.Id}:priority",
                 $"{ticket.Key} priority changed to {ticket.Priority}.",
-                $"La priorité de {ticket.Key} est maintenant {ticket.Priority}.",
                 $"/app/tickets/{ticket.Id}",
                 ticket.Id.ToString()), cancellationToken);
         }
@@ -682,8 +677,7 @@ public static class TicketEndpoints
             ticket.ProjectId,
             ticket.Id,
             audit.Id.ToString(),
-            $"{ticket.Key} moved to {transition.ToStatus.LabelEnglish}.",
-            $"{ticket.Key} est passé à {transition.ToStatus.LabelFrench}.",
+            $"{ticket.Key} moved to {transition.ToStatus.Label}.",
             $"/app/tickets/{ticket.Id}",
             ticket.Id.ToString()), cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -879,16 +873,14 @@ public static class TicketEndpoints
                 entity.Key,
                 entity.ProjectId,
                 entity.Project.Key,
-                entity.Project.NameEnglish,
-                entity.Project.NameFrench,
+                entity.Project.Name,
                 entity.Title,
                 entity.Description,
                 entity.Type,
                 entity.Priority,
                 entity.WorkflowStatusId,
                 entity.WorkflowStatus.Key,
-                entity.WorkflowStatus.LabelEnglish,
-                entity.WorkflowStatus.LabelFrench,
+                entity.WorkflowStatus.Label,
                 entity.WorkflowStatus.Category,
                 entity.ReporterUserId,
                 entity.ReporterDisplayNameSnapshot,
@@ -1014,8 +1006,9 @@ public static class TicketEndpoints
         }
 
         var definitions = await dbContext.CustomFieldDefinitions.AsNoTracking()
-            .Where(entity => entity.IsActive && (entity.ProjectId == projectId || entity.ProjectId == null))
-            .OrderByDescending(entity => entity.ProjectId == projectId)
+            .Where(entity => entity.IsActive &&
+                             (entity.ProjectIds.Length == 0 || entity.ProjectIds.Contains(projectId)))
+            .OrderByDescending(entity => entity.ProjectIds.Length > 0)
             .ThenBy(entity => entity.Order)
             .ToArrayAsync(cancellationToken);
         if (requireAll && definitions.Any(entity => entity.IsRequired &&
@@ -1054,8 +1047,8 @@ public static class TicketEndpoints
 
         var definitions = await dbContext.CustomFieldDefinitions.AsNoTracking()
             .Where(entity => values.Keys.Contains(entity.Key) &&
-                             (entity.ProjectId == ticket.ProjectId || entity.ProjectId == null))
-            .OrderByDescending(entity => entity.ProjectId == ticket.ProjectId)
+                             (entity.ProjectIds.Length == 0 || entity.ProjectIds.Contains(ticket.ProjectId)))
+            .OrderByDescending(entity => entity.ProjectIds.Length > 0)
             .ToArrayAsync(cancellationToken);
         foreach (var (key, value) in values)
         {
@@ -1153,15 +1146,13 @@ public sealed record TicketListItemResponse(
     Guid Id,
     string Key,
     Guid ProjectId,
-    string ProjectNameEnglish,
-    string ProjectNameFrench,
+    string ProjectName,
     string Title,
     TicketType Type,
     TicketPriority Priority,
     Guid StatusId,
     string StatusKey,
-    string StatusLabelEnglish,
-    string StatusLabelFrench,
+    string StatusLabel,
     Guid? AssigneeUserId,
     string? AssigneeDisplayName,
     string ReporterDisplayName,
@@ -1184,16 +1175,14 @@ public sealed record TicketDetailResponse(
     string Key,
     Guid ProjectId,
     string ProjectKey,
-    string ProjectNameEnglish,
-    string ProjectNameFrench,
+    string ProjectName,
     string Title,
     string Description,
     TicketType Type,
     TicketPriority Priority,
     Guid StatusId,
     string StatusKey,
-    string StatusLabelEnglish,
-    string StatusLabelFrench,
+    string StatusLabel,
     WorkflowStatusCategory StatusCategory,
     Guid? ReporterUserId,
     string ReporterDisplayName,

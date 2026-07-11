@@ -152,10 +152,8 @@ public sealed class KnowledgeArticleConfiguration : IEntityTypeConfiguration<Kno
     public void Configure(EntityTypeBuilder<KnowledgeArticle> builder)
     {
         builder.Property(entity => entity.Slug).HasMaxLength(180).IsRequired();
-        builder.Property(entity => entity.TitleEnglish).HasMaxLength(300).IsRequired();
-        builder.Property(entity => entity.TitleFrench).HasMaxLength(300).IsRequired();
-        builder.Property(entity => entity.BodyEnglish).HasMaxLength(100_000).IsRequired();
-        builder.Property(entity => entity.BodyFrench).HasMaxLength(100_000).IsRequired();
+        builder.Property(entity => entity.Title).HasMaxLength(300).IsRequired();
+        builder.Property(entity => entity.Body).HasMaxLength(100_000).IsRequired();
         builder.Property(entity => entity.SearchText).HasMaxLength(20_000).IsRequired();
         builder.HasIndex(entity => new { entity.TenantId, entity.Slug }).IsUnique();
         builder.HasIndex(entity => new { entity.TenantId, entity.Status, entity.Visibility });

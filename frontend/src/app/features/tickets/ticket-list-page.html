@@ -1,110 +1,146 @@
 <header class="page-heading">
   <div>
-    <p class="eyebrow">{{ i18n.text('nav.tickets') }}</p>
-    <h1>{{ i18n.text('tickets.title') }}</h1>
+    <h1>{{ i18n.text('nav.board') }}</h1>
     <p>{{ i18n.text('tickets.summary') }}</p>
   </div>
   @if (store.canMaintainTickets()) {
     <a pButton routerLink="/app/tickets/new">{{ i18n.text('tickets.new') }}</a>
   }
 </header>
-<section class="view-bar content-panel" aria-label="Saved ticket views">
-  <div class="field">
-    <label for="savedView">{{
-      i18n.language() === 'French' ? 'Vues enregistrées' : 'Saved views'
-    }}</label
-    ><p-select
-      inputId="savedView"
-      [(ngModel)]="selectedViewId"
-      [options]="savedViews()"
-      optionLabel="name"
-      optionValue="id"
-      [showClear]="true"
-      (onChange)="applyView()"
-    />
-  </div>
-  <button
-    pButton
-    type="button"
-    severity="secondary"
-    [text]="true"
-    [disabled]="!selectedViewId"
-    (click)="deleteView()"
-  >
-    {{ i18n.language() === 'French' ? 'Supprimer la vue' : 'Delete view' }}
-  </button>
-  <div class="field save-view">
-    <label for="viewName">{{
-      i18n.language() === 'French' ? 'Nouvelle vue personnelle' : 'New personal view'
-    }}</label
-    ><input
-      pInputText
-      id="viewName"
-      [(ngModel)]="viewName"
-      [placeholder]="i18n.language() === 'French' ? 'Nom de la vue' : 'View name'"
-    />
-  </div>
-  <button
-    pButton
-    type="button"
-    severity="secondary"
-    [outlined]="true"
-    [disabled]="!viewName.trim()"
-    (click)="saveCurrentView()"
-  >
-    {{ i18n.text('common.save') }}
-  </button>
-  @if (
-    filterForm.controls.projectId.value &&
-    store.canManageProject(filterForm.controls.projectId.value)
-  ) {
-    <label class="publish-view"
-      ><input type="checkbox" [(ngModel)]="publishView" />
-      {{ i18n.language() === 'French' ? 'Publier pour le projet' : 'Publish to project' }}</label
-    >
-  }
-</section>
-<form [formGroup]="filterForm" (ngSubmit)="load()" class="filter-bar" aria-label="Ticket filters">
-  <div class="field search-field">
-    <label for="ticketSearch">{{ i18n.text('common.search') }}</label
-    ><input
-      pInputText
+
+<form
+  [formGroup]="filterForm"
+  (ngSubmit)="load()"
+  class="toolbar content-panel"
+  aria-label="Ticket filters"
+>
+  <div class="search-box">
+    <app-icon name="search" [size]="15" />
+    <input
       id="ticketSearch"
       formControlName="search"
-      [placeholder]="i18n.text('tickets.key') + ', ' + i18n.text('tickets.titleField')"
+      [placeholder]="i18n.text('common.search')"
+      [attr.aria-label]="i18n.text('common.search')"
     />
   </div>
-  <div class="field">
-    <label for="projectFilter">{{ i18n.text('common.project') }}</label
-    ><p-select
-      inputId="projectFilter"
-      formControlName="projectId"
-      [options]="projects()"
-      optionValue="id"
-      [optionLabel]="i18n.language() === 'French' ? 'nameFrench' : 'nameEnglish'"
-      [showClear]="true"
-      ><ng-template #selectedItem let-project>{{
-        project ? projectName(project) : i18n.text('common.all')
-      }}</ng-template
-      ><ng-template #item let-project>{{ projectName(project) }}</ng-template></p-select
-    >
-  </div>
-  <div class="field">
-    <label for="queueFilter">{{ i18n.text('tickets.queue') }}</label
-    ><p-select
-      inputId="queueFilter"
-      formControlName="queue"
-      [options]="queues"
-      optionValue="value"
-      optionLabel="value"
-      ><ng-template #selectedItem let-option>{{
-        option ? i18n.text(option.labelKey) : i18n.text('common.all')
-      }}</ng-template
-      ><ng-template #item let-option>{{ i18n.text(option.labelKey) }}</ng-template></p-select
-    >
-  </div>
-  <button pButton type="submit" [loading]="loading()">{{ i18n.text('common.search') }}</button>
+  <p-select
+    inputId="projectFilter"
+    formControlName="projectId"
+    [options]="projects()"
+    optionValue="id"
+    [optionLabel]="'name'"
+    [showClear]="true"
+    [ariaLabel]="i18n.text('common.project')"
+    [placeholder]="i18n.text('common.project') + ' · ' + i18n.text('common.all')"
+    (onChange)="load()"
+    ><ng-template #selectedItem let-project>{{
+      project ? projectName(project) : i18n.text('common.project') + ' · ' + i18n.text('common.all')
+    }}</ng-template
+    ><ng-template #item let-project>{{ projectName(project) }}</ng-template></p-select
+  >
+  <p-select
+    inputId="queueFilter"
+    formControlName="queue"
+    [options]="queues"
+    optionValue="value"
+    optionLabel="value"
+    [ariaLabel]="i18n.text('tickets.queue')"
+    (onChange)="load()"
+    ><ng-template #selectedItem let-option>{{
+      option && option.value
+        ? i18n.text(option.labelKey)
+        : i18n.text('tickets.queue') + ' · ' + i18n.text('common.all')
+    }}</ng-template
+    ><ng-template #item let-option>{{ i18n.text(option.labelKey) }}</ng-template></p-select
+  >
+  <button pButton type="submit" size="small" severity="secondary" [outlined]="true" [loading]="loading()">
+    {{ i18n.text('common.search') }}
+  </button>
 </form>
+
+<div class="view-tabs" role="tablist" aria-label="Ticket views">
+  <button
+    type="button"
+    role="tab"
+    [attr.aria-selected]="view() === 'board'"
+    [class.active]="view() === 'board'"
+    (click)="setView('board')"
+  >
+    <app-icon name="dashboard" [size]="15" />
+    {{ i18n.text('tickets.boardView') }}
+  </button>
+  <button
+    type="button"
+    role="tab"
+    [attr.aria-selected]="view() === 'list'"
+    [class.active]="view() === 'list'"
+    (click)="setView('list')"
+  >
+    <app-icon name="tickets" [size]="15" />
+    {{ i18n.text('tickets.listView') }}
+  </button>
+</div>
+
+@if (view() === 'board') {
+  <div class="board" cdkDropListGroup>
+    @for (column of columns(); track column.key) {
+      <section class="board-column">
+        <header class="board-column-header">
+          <span class="column-dot" [style.background]="column.color" aria-hidden="true"></span>
+          <h2>{{ columnLabel(column) }}</h2>
+          <span class="column-count">{{ column.tickets.length }}</span>
+        </header>
+        <div
+          class="board-column-body"
+          cdkDropList
+          [cdkDropListData]="column"
+          [cdkDropListEnterPredicate]="boardEnterPredicate"
+          (cdkDropListDropped)="onBoardDrop($event)"
+        >
+          @for (ticket of column.tickets; track ticket.id) {
+            <article
+              class="board-card"
+              cdkDrag
+              [cdkDragData]="ticket"
+              [cdkDragDisabled]="!store.canMaintainProject(ticket.projectId)"
+            >
+              <div class="board-card-top">
+                <a [routerLink]="['/app/tickets', ticket.id]" class="ticket-key">{{
+                  ticket.key
+                }}</a>
+                <span class="pill" [class]="priorityPill(ticket.priority)">{{
+                  i18n.ticketPriority(ticket.priority)
+                }}</span>
+              </div>
+              <a [routerLink]="['/app/tickets', ticket.id]" class="board-card-title">{{
+                ticket.title
+              }}</a>
+              <div class="board-card-footer">
+                @if (ticket.assigneeDisplayName; as assignee) {
+                  <span class="assignee"
+                    ><span class="assignee-avatar" aria-hidden="true">{{ initials(assignee) }}</span
+                    >{{ assignee }}</span
+                  >
+                } @else {
+                  <span class="muted-cell">{{ i18n.text('tickets.unassigned') }}</span>
+                }
+                <time>{{ ticket.updatedAt | localizedDate: 'mediumDate' }}</time>
+              </div>
+            </article>
+          } @empty {
+            <p class="column-empty">{{ i18n.text('common.empty') }}</p>
+          }
+        </div>
+      </section>
+    }
+    @if (!columns().length && !loading()) {
+      <div class="empty-state board-empty">
+        <app-icon name="inbox" [size]="26" />
+        <span>{{ i18n.text('common.empty') }}</span>
+      </div>
+    }
+  </div>
+} @else {
 <section class="content-panel table-panel">
   @if (store.canBulkTickets() && selectedTickets.length) {
     <div
@@ -149,13 +185,13 @@
     [(selection)]="selectedTickets"
     dataKey="id"
     [loading]="loading()"
-    [tableStyle]="{ 'min-width': '68rem' }"
+    [tableStyle]="{ 'min-width': '56rem' }"
     aria-label="Tickets"
   >
     <ng-template #header
       ><tr>
         @if (store.canBulkTickets()) {
-          <th><p-table-header-checkbox /></th>
+          <th class="selection-cell"><p-table-header-checkbox /></th>
         }
         <th>{{ i18n.text('tickets.key') }}</th>
         <th>{{ i18n.text('tickets.titleField') }}</th>
@@ -169,31 +205,47 @@
     <ng-template #body let-ticket
       ><tr>
         @if (store.canBulkTickets()) {
-          <td><p-table-checkbox [value]="ticket" /></td>
+          <td class="selection-cell"><p-table-checkbox [value]="ticket" /></td>
         }
         <td>
           <a [routerLink]="['/app/tickets', ticket.id]" class="ticket-key">{{ ticket.key }}</a>
         </td>
-        <td>
+        <td class="title-cell">
           <a [routerLink]="['/app/tickets', ticket.id]" class="ticket-title">{{ ticket.title }}</a>
         </td>
-        <td>{{ ticketProjectName(ticket) }}</td>
-        <td><p-tag [value]="statusLabel(ticket)" severity="secondary" /></td>
+        <td class="muted-cell">{{ ticketProjectName(ticket) }}</td>
         <td>
-          <p-tag
-            [value]="i18n.ticketPriority(ticket.priority)"
-            [severity]="prioritySeverity(ticket.priority)"
-          />
+          <span class="pill" [class]="statusPill(ticket)">{{ statusLabel(ticket) }}</span>
         </td>
-        <td>{{ ticket.assigneeDisplayName || '—' }}</td>
-        <td>{{ ticket.updatedAt | localizedDate: 'mediumDate' }}</td>
+        <td>
+          <span class="pill" [class]="priorityPill(ticket.priority)">{{
+            i18n.ticketPriority(ticket.priority)
+          }}</span>
+        </td>
+        <td>
+          @if (ticket.assigneeDisplayName; as assignee) {
+            <span class="assignee"
+              ><span class="assignee-avatar" aria-hidden="true">{{ initials(assignee) }}</span
+              >{{ assignee }}</span
+            >
+          } @else {
+            <span class="muted-cell">—</span>
+          }
+        </td>
+        <td class="muted-cell">{{ ticket.updatedAt | localizedDate: 'mediumDate' }}</td>
       </tr></ng-template
     >
     <ng-template #emptymessage
       ><tr>
-        <td [attr.colspan]="store.canBulkTickets() ? 8 : 7">{{ i18n.text('common.empty') }}</td>
+        <td [attr.colspan]="store.canBulkTickets() ? 8 : 7">
+          <div class="empty-state">
+            <app-icon name="inbox" [size]="26" />
+            <span>{{ i18n.text('common.empty') }}</span>
+          </div>
+        </td>
       </tr></ng-template
     >
   </p-table>
   <p class="result-count">{{ data().total }} {{ i18n.text('tickets.title').toLowerCase() }}</p>
 </section>
+}

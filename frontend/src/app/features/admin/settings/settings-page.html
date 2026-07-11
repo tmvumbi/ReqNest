@@ -58,19 +58,66 @@
       }}
     </p>
     <div class="field-row">
-      <label class="logo-upload"
-        >{{ i18n.language() === 'French' ? 'Logo sur fond clair' : 'Light background logo'
-        }}<input
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          (change)="uploadLogo($event, 'light')" /></label
-      ><label class="logo-upload"
-        >{{ i18n.language() === 'French' ? 'Logo sur fond sombre' : 'Dark background logo'
-        }}<input
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          (change)="uploadLogo($event, 'dark')"
-      /></label>
+      <div class="logo-upload">
+        <label for="lightLogoFile">{{
+          i18n.language() === 'French' ? 'Logo sur fond clair' : 'Light background logo'
+        }}</label>
+        @if (lightLogoUrl(); as url) {
+          <div class="logo-preview light">
+            <img [src]="url" [alt]="i18n.language() === 'French' ? 'Logo clair' : 'Light logo'" />
+          </div>
+        }
+        <div class="logo-actions">
+          <input
+            id="lightLogoFile"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            (change)="uploadLogo($event, 'light')"
+          />
+          @if (lightLogoUrl()) {
+            <button
+              pButton
+              type="button"
+              size="small"
+              severity="danger"
+              [text]="true"
+              (click)="removeLogo('light')"
+            >
+              {{ i18n.language() === 'French' ? 'Retirer' : 'Remove' }}
+            </button>
+          }
+        </div>
+      </div>
+      <div class="logo-upload">
+        <label for="darkLogoFile">{{
+          i18n.language() === 'French' ? 'Logo sur fond sombre' : 'Dark background logo'
+        }}</label>
+        @if (darkLogoUrl(); as url) {
+          <div class="logo-preview dark">
+            <img [src]="url" [alt]="i18n.language() === 'French' ? 'Logo sombre' : 'Dark logo'" />
+          </div>
+        }
+        <div class="logo-actions">
+          <input
+            id="darkLogoFile"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            (change)="uploadLogo($event, 'dark')"
+          />
+          @if (darkLogoUrl()) {
+            <button
+              pButton
+              type="button"
+              size="small"
+              severity="danger"
+              [text]="true"
+              (click)="removeLogo('dark')"
+            >
+              {{ i18n.language() === 'French' ? 'Retirer' : 'Remove' }}
+            </button>
+          }
+        </div>
+      </div>
     </div>
   </fieldset>
   <div class="field">
@@ -81,12 +128,8 @@
     <label for="reportFooter">{{ i18n.text('admin.footer') }}</label
     ><textarea pTextarea id="reportFooter" formControlName="reportFooterText" rows="3"></textarea>
   </div>
-  @if (saved()) {
-    <p-message severity="success">{{
-      i18n.language() === 'French' ? 'Paramètres enregistrés.' : 'Settings saved.'
-    }}</p-message>
-  }
   <button pButton type="submit" [loading]="saving() || logoUploading()">
     {{ i18n.text('common.save') }}
   </button>
 </form>
+<p-confirmdialog [style]="{ width: '26rem' }" />

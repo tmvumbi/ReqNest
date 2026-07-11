@@ -114,6 +114,12 @@ export class SessionStore {
     this.setSession({ ...current, preferredLanguage: language, themePreference: theme });
   }
 
+  setDisplayName(displayName: string): void {
+    const current = this.sessionState();
+    if (!current) return;
+    this.setSession({ ...current, displayName });
+  }
+
   clear(): void {
     this.sessionState.set(null);
     this.tenantIdState.set(null);

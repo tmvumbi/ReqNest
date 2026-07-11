@@ -28,8 +28,7 @@ export interface AuthenticatedSession {
 export interface Project {
   id: string;
   key: string;
-  nameEnglish: string;
-  nameFrench: string;
+  name: string;
   description: string | null;
   isArchived: boolean;
   workflowId: string;
@@ -43,8 +42,7 @@ export interface ProjectOverview {
   byStatus: {
     statusId: string;
     key: string;
-    labelEnglish: string;
-    labelFrench: string;
+    label: string;
     count: number;
   }[];
   byPriority: { priority: TicketPriority; count: number }[];
@@ -62,8 +60,7 @@ export interface ProjectOverview {
 export interface WorkflowStatus {
   id: string;
   key: string;
-  labelEnglish: string;
-  labelFrench: string;
+  label: string;
   category: 'ToDo' | 'InProgress' | 'Done';
   order: number;
   color: string;
@@ -75,8 +72,7 @@ export interface WorkflowTransition {
   id: string;
   fromStatusId: string;
   toStatusId: string;
-  nameEnglish: string | null;
-  nameFrench: string | null;
+  name: string | null;
   commentRequired: boolean;
 }
 
@@ -95,15 +91,13 @@ export interface TicketListItem {
   id: string;
   key: string;
   projectId: string;
-  projectNameEnglish: string;
-  projectNameFrench: string;
+  projectName: string;
   title: string;
   type: TicketType;
   priority: TicketPriority;
   statusId: string;
   statusKey: string;
-  statusLabelEnglish: string;
-  statusLabelFrench: string;
+  statusLabel: string;
   assigneeUserId: string | null;
   assigneeDisplayName: string | null;
   reporterDisplayName: string;
@@ -134,16 +128,14 @@ export interface TicketDetail {
   key: string;
   projectId: string;
   projectKey: string;
-  projectNameEnglish: string;
-  projectNameFrench: string;
+  projectName: string;
   title: string;
   description: string;
   type: TicketType;
   priority: TicketPriority;
   statusId: string;
   statusKey: string;
-  statusLabelEnglish: string;
-  statusLabelFrench: string;
+  statusLabel: string;
   statusCategory: 'ToDo' | 'InProgress' | 'Done';
   reporterUserId: string | null;
   reporterDisplayName: string;
@@ -226,8 +218,7 @@ export interface AppNotification {
   actorUserId: string | null;
   projectId: string | null;
   ticketId: string | null;
-  summaryEnglish: string;
-  summaryFrench: string;
+  summary: string;
   deepLink: string;
   readAt: string | null;
   createdAt: string;
@@ -250,17 +241,6 @@ export interface NotificationPreferences {
   digestHourLocal: number;
 }
 
-export interface SavedView {
-  id: string;
-  name: string;
-  projectId: string | null;
-  filtersJson: string;
-  sortJson: string;
-  columnsJson: string;
-  groupBy: string | null;
-  isPublished: boolean;
-  ownerUserId: string;
-}
 
 export interface TenantSettings {
   id: string;
@@ -295,23 +275,12 @@ export interface Member {
 
 export interface ReportData {
   type: string;
-  titleEnglish: string;
-  titleFrench: string;
+  title: string;
   columns: string[];
   rows: Record<string, unknown>[];
   definitionsEnglish: string[];
-  definitionsFrench: string[];
   truncated: boolean;
   generatedAt: string;
-}
-
-export interface ReportExport {
-  id: string;
-  reportType: string;
-  language: AppLanguage;
-  status: 'Pending' | 'Ready' | 'Failed' | 'Expired';
-  expiresAt: string;
-  createdAt: string;
 }
 
 export interface AuditPage {
@@ -336,8 +305,7 @@ export interface TicketTypeDefinition {
   id: string;
   projectId: string | null;
   key: string;
-  labelEnglish: string;
-  labelFrench: string;
+  label: string;
   order: number;
   isActive: boolean;
 }
@@ -347,7 +315,8 @@ export interface TicketPriorityDefinition extends TicketTypeDefinition {
   weight: number;
 }
 
-export interface CustomFieldDefinition extends TicketTypeDefinition {
+export interface CustomFieldDefinition extends Omit<TicketTypeDefinition, 'projectId'> {
+  projectIds: string[];
   kind: CustomFieldKind;
   isRequired: boolean;
   optionsJson: string;
@@ -361,7 +330,7 @@ export interface TicketSchema {
 
 export interface SlaPolicy {
   id: string;
-  projectId: string | null;
+  projectIds: string[];
   name: string;
   timeZone: string;
   isDefault: boolean;
@@ -421,25 +390,10 @@ export interface TicketRelationship {
   createdAt: string;
 }
 
-export interface ReportSchedule {
-  id: string;
-  projectId: string | null;
-  name: string;
-  reportType: string;
-  filterSnapshotJson: string;
-  language: AppLanguage;
-  format: 'Pdf' | 'Csv';
-  frequency: 'Daily' | 'Weekly' | 'Monthly';
-  isActive: boolean;
-  nextRunAt: string;
-  lastRunAt: string | null;
-}
-
 export interface PortalProject {
   id: string;
   key: string;
-  nameEnglish: string;
-  nameFrench: string;
+  name: string;
   isEnabled: boolean;
 }
 
@@ -449,16 +403,14 @@ export interface PublicPortal {
   companyShortName: string;
   primaryColor: string;
   defaultLanguage: AppLanguage;
-  introductionEnglish: string | null;
-  introductionFrench: string | null;
+  introduction: string | null;
   projects: PortalProject[];
 }
 
 export interface PortalSettings {
   tenantId: string;
   isEnabled: boolean;
-  introductionEnglish: string | null;
-  introductionFrench: string | null;
+  introduction: string | null;
   projects: PortalProject[];
 }
 
@@ -468,10 +420,8 @@ export interface RequesterTicket {
     key: string;
     title: string;
     description: string;
-    projectNameEnglish: string;
-    projectNameFrench: string;
-    statusEnglish: string;
-    statusFrench: string;
+    projectName: string;
+    status: string;
     slaState: string;
     createdAt: string;
     updatedAt: string;
@@ -543,10 +493,8 @@ export interface KnowledgeArticle {
   id: string;
   projectId: string | null;
   slug: string;
-  titleEnglish: string;
-  titleFrench: string;
-  bodyEnglish: string;
-  bodyFrench: string;
+  title: string;
+  body: string;
   status: 'Draft' | 'Published' | 'Archived';
   visibility: 'Internal' | 'Requesters';
   publishedAt: string | null;
@@ -563,4 +511,31 @@ export interface AiAssistance {
   reviewedByUserId: string | null;
   reviewedAt: string | null;
   createdAt: string;
+}
+
+export interface AssistantConversationSummary {
+  id: string;
+  title: string;
+  lastMessageAt: string;
+  createdAt: string;
+}
+
+export interface AssistantMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  isVoice: boolean;
+  createdAt: string;
+}
+
+export interface AssistantConversationDetail {
+  id: string;
+  title: string;
+  lastMessageAt: string;
+  messages: AssistantMessage[];
+}
+
+export interface AssistantRealtimeSession {
+  clientSecret: string;
+  model: string;
 }

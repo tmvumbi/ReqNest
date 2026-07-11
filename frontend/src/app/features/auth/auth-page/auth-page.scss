@@ -35,23 +35,25 @@
   box-shadow: 0 0.75rem 2rem color-mix(in srgb, var(--p-primary-color) 26%, transparent);
 }
 .auth-copy h1 {
-  max-width: 10ch;
-  margin: 0 0 1.25rem;
-  font-size: clamp(3rem, 7vw, 6rem);
-  line-height: 0.95;
-  letter-spacing: -0.06em;
+  max-width: 16ch;
+  margin: 0 0 0.75rem;
+  font-size: clamp(1.8rem, 3.5vw, 2.4rem);
+  line-height: 1.15;
+  letter-spacing: -0.03em;
 }
 .auth-copy > p:last-child {
-  max-width: 34rem;
+  max-width: 30rem;
   color: var(--app-text-muted);
-  font-size: 1.125rem;
-  line-height: 1.7;
+  font-size: 0.95rem;
+  line-height: 1.65;
 }
 .eyebrow {
+  display: block;
+  margin-bottom: 0.6rem;
   color: var(--p-primary-color);
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 form,
@@ -68,7 +70,10 @@ form {
   gap: 1rem;
 }
 label {
-  font-weight: 700;
+  color: var(--app-text-muted);
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
 }
 input,
 p-select,
@@ -109,9 +114,6 @@ small {
   .auth-layout {
     grid-template-columns: 1fr;
     gap: 2rem;
-  }
-  .auth-copy h1 {
-    font-size: clamp(2.8rem, 14vw, 4.5rem);
   }
 }
 @media (max-width: 480px) {

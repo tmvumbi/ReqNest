@@ -4,7 +4,7 @@
       ><span>{{ portal()?.companyShortName || 'R' }}</span
       >{{ portal()?.companyName || 'ReqNest' }}</a
     >
-    <div>
+    <div class="row-actions">
       <button pButton type="button" [text]="true" (click)="toggleLanguage()">
         {{ i18n.language() === 'English' ? 'FR' : 'EN' }}</button
       ><button pButton type="button" [text]="true" (click)="toggleTheme()">
@@ -24,11 +24,11 @@
       <h1>{{ text('How can we help?', 'Comment pouvons-nous aider ?') }}</h1>
       <p>
         {{
-          text(
-            item.introductionEnglish ||
+          item.introduction ||
+            text(
               'Submit and follow your support requests in one secure place.',
-            item.introductionFrench || 'Soumettez et suivez vos demandes dans un espace sécurisé.'
-          )
+              'Soumettez et suivez vos demandes dans un espace sécurisé.'
+            )
         }}
       </p>
     </section>
@@ -42,7 +42,7 @@
             name="project"
             [options]="item.projects"
             optionValue="id"
-            [optionLabel]="i18n.language() === 'French' ? 'nameFrench' : 'nameEnglish'"
+            [optionLabel]="'name'"
           />
           <div class="split">
             <label
@@ -99,15 +99,15 @@
           <article class="ticket">
             <div>
               <span>{{ result.ticket.key }}</span
-              ><strong>{{ text(result.ticket.statusEnglish, result.ticket.statusFrench) }}</strong>
+              ><strong>{{ result.ticket.status }}</strong>
             </div>
             <h2>{{ result.ticket.title }}</h2>
-            <div class="rich-content" [innerHTML]="result.ticket.description"></div>
+            <div class="rich-content" [innerHTML]="result.ticket.description | richHtml"></div>
             <ol>
               @for (comment of result.comments; track comment.id) {
                 <li>
                   <strong>{{ comment.authorName }}</strong>
-                  <div class="rich-content" [innerHTML]="comment.body"></div>
+                  <div class="rich-content" [innerHTML]="comment.body | richHtml"></div>
                   <time>{{ comment.createdAt | localizedDate: 'short' }}</time>
                 </li>
               }
@@ -142,10 +142,10 @@
       <div class="articles">
         @for (article of articles(); track article.id) {
           <article>
-            <h3>{{ text(article.titleEnglish, article.titleFrench) }}</h3>
+            <h3>{{ article.title }}</h3>
             <div
               class="rich-content"
-              [innerHTML]="text(article.bodyEnglish, article.bodyFrench)"
+              [innerHTML]="article.body | richHtml"
             ></div>
           </article>
         } @empty {

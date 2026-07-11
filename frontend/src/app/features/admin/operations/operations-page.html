@@ -1,3 +1,4 @@
+<p-confirmdialog [style]="{ width: '26rem' }" />
 <header class="page-heading">
   <div>
     <p class="eyebrow">{{ i18n.language() === 'French' ? 'Administration' : 'Administration' }}</p>
@@ -18,13 +19,6 @@
   </div>
 </header>
 
-@if (success()) {
-  <p-message severity="success">{{ success() }}</p-message>
-}
-@if (error()) {
-  <p-message severity="error">{{ error() }}</p-message>
-}
-
 <section class="content-panel scope-panel">
   <div class="field">
     <label for="configurationScope">{{
@@ -35,7 +29,7 @@
       [(ngModel)]="configProjectId"
       [options]="projects()"
       optionValue="id"
-      [optionLabel]="i18n.language() === 'French' ? 'nameFrench' : 'nameEnglish'"
+      [optionLabel]="'name'"
       [showClear]="true"
       (onChange)="changeScope()"
     >
@@ -57,8 +51,61 @@
     <ul class="definition-list">
       @for (item of schema()?.types; track item.id) {
         <li>
-          <strong>{{ label(item) }}</strong
-          ><code>{{ item.key }}</code>
+          @if (editingDefinitionId === item.id) {
+            <input
+              pInputText
+              class="edit-label"
+              [(ngModel)]="editingLabel"
+              [attr.aria-label]="i18n.language() === 'French' ? 'Libellé' : 'Label'"
+            />
+            <div class="row-actions">
+              <button
+                pButton
+                type="button"
+                size="small"
+                [disabled]="!editingLabel.trim()"
+                [loading]="busy()"
+                (click)="saveType(item)"
+              >
+                {{ i18n.text('common.save') }}
+              </button>
+              <button
+                pButton
+                type="button"
+                size="small"
+                severity="secondary"
+                [text]="true"
+                (click)="cancelEdit()"
+              >
+                {{ i18n.text('common.cancel') }}
+              </button>
+            </div>
+          } @else {
+            <strong>{{ label(item) }}</strong
+            ><code>{{ item.key }}</code>
+            <div class="row-actions">
+              <button
+                pButton
+                type="button"
+                size="small"
+                severity="secondary"
+                [text]="true"
+                (click)="startEdit(item)"
+              >
+                {{ i18n.text('common.edit') }}
+              </button>
+              <button
+                pButton
+                type="button"
+                size="small"
+                severity="danger"
+                [text]="true"
+                (click)="deleteType(item)"
+              >
+                {{ i18n.language() === 'French' ? 'Supprimer' : 'Delete' }}
+              </button>
+            </div>
+          }
         </li>
       }
     </ul>
@@ -68,13 +115,16 @@
         [(ngModel)]="typeKey"
         [placeholder]="i18n.language() === 'French' ? 'Clé' : 'Key'"
       />
-      <input pInputText [(ngModel)]="typeEnglish" placeholder="English label" />
-      <input pInputText [(ngModel)]="typeFrench" placeholder="Libellé français" />
+      <input
+        pInputText
+        [(ngModel)]="typeEnglish"
+        [placeholder]="i18n.language() === 'French' ? 'Libellé' : 'Label'"
+      />
       <button
         pButton
         type="button"
         (click)="addType()"
-        [disabled]="!typeKey || !typeEnglish || !typeFrench"
+        [disabled]="!typeKey || !typeEnglish"
         [loading]="busy()"
       >
         {{ i18n.language() === 'French' ? 'Ajouter' : 'Add' }}
@@ -87,9 +137,68 @@
     <ul class="definition-list">
       @for (item of schema()?.priorities; track item.id) {
         <li>
-          <span class="swatch" [style.background]="item.color"></span
-          ><strong>{{ label(item) }}</strong
-          ><code>{{ item.key }}</code>
+          @if (editingDefinitionId === item.id) {
+            <input
+              type="color"
+              class="edit-color"
+              [(ngModel)]="editingColor"
+              aria-label="Priority color"
+            />
+            <input
+              pInputText
+              class="edit-label"
+              [(ngModel)]="editingLabel"
+              [attr.aria-label]="i18n.language() === 'French' ? 'Libellé' : 'Label'"
+            />
+            <div class="row-actions">
+              <button
+                pButton
+                type="button"
+                size="small"
+                [disabled]="!editingLabel.trim()"
+                [loading]="busy()"
+                (click)="savePriority(item)"
+              >
+                {{ i18n.text('common.save') }}
+              </button>
+              <button
+                pButton
+                type="button"
+                size="small"
+                severity="secondary"
+                [text]="true"
+                (click)="cancelEdit()"
+              >
+                {{ i18n.text('common.cancel') }}
+              </button>
+            </div>
+          } @else {
+            <span class="swatch" [style.background]="item.color"></span
+            ><strong>{{ label(item) }}</strong
+            ><code>{{ item.key }}</code>
+            <div class="row-actions">
+              <button
+                pButton
+                type="button"
+                size="small"
+                severity="secondary"
+                [text]="true"
+                (click)="startEdit(item)"
+              >
+                {{ i18n.text('common.edit') }}
+              </button>
+              <button
+                pButton
+                type="button"
+                size="small"
+                severity="danger"
+                [text]="true"
+                (click)="deletePriority(item)"
+              >
+                {{ i18n.language() === 'French' ? 'Supprimer' : 'Delete' }}
+              </button>
+            </div>
+          }
         </li>
       }
     </ul>
@@ -99,14 +208,17 @@
         [(ngModel)]="priorityKey"
         [placeholder]="i18n.language() === 'French' ? 'Clé' : 'Key'"
       />
-      <input pInputText [(ngModel)]="priorityEnglish" placeholder="English label" />
-      <input pInputText [(ngModel)]="priorityFrench" placeholder="Libellé français" />
+      <input
+        pInputText
+        [(ngModel)]="priorityEnglish"
+        [placeholder]="i18n.language() === 'French' ? 'Libellé' : 'Label'"
+      />
       <input type="color" [(ngModel)]="priorityColor" aria-label="Priority color" />
       <button
         pButton
         type="button"
         (click)="addPriority()"
-        [disabled]="!priorityKey || !priorityEnglish || !priorityFrench"
+        [disabled]="!priorityKey || !priorityEnglish"
         [loading]="busy()"
       >
         {{ i18n.language() === 'French' ? 'Ajouter' : 'Add' }}
@@ -121,6 +233,7 @@
         ><tr>
           <th>{{ i18n.language() === 'French' ? 'Champ' : 'Field' }}</th>
           <th>{{ i18n.language() === 'French' ? 'Type' : 'Kind' }}</th>
+          <th>{{ i18n.language() === 'French' ? 'Projets' : 'Projects' }}</th>
           <th>{{ i18n.language() === 'French' ? 'Obligatoire' : 'Required' }}</th>
         </tr></ng-template
       >
@@ -130,6 +243,7 @@
             {{ label(item) }} <code>{{ item.key }}</code>
           </td>
           <td>{{ item.kind }}</td>
+          <td>{{ projectSetLabel(item.projectIds) }}</td>
           <td>{{ item.isRequired ? '✓' : '—' }}</td>
         </tr></ng-template
       >
@@ -140,8 +254,11 @@
         [(ngModel)]="fieldKey"
         [placeholder]="i18n.language() === 'French' ? 'Clé' : 'Key'"
       />
-      <input pInputText [(ngModel)]="fieldEnglish" placeholder="English label" />
-      <input pInputText [(ngModel)]="fieldFrench" placeholder="Libellé français" />
+      <input
+        pInputText
+        [(ngModel)]="fieldEnglish"
+        [placeholder]="i18n.language() === 'French' ? 'Libellé' : 'Label'"
+      />
       <p-select [(ngModel)]="fieldKind" [options]="fieldKinds" ariaLabel="Field kind" />
       @if (fieldKind === 'Choice') {
         <input
@@ -154,6 +271,15 @@
           "
         />
       }
+      <p-multiselect
+        [(ngModel)]="fieldProjectIds"
+        [options]="projects()"
+        optionValue="id"
+        optionLabel="name"
+        [showClear]="true"
+        [placeholder]="i18n.language() === 'French' ? 'Tous les projets' : 'All projects'"
+        [ariaLabel]="i18n.language() === 'French' ? 'Projets' : 'Projects'"
+      />
       <label
         ><input type="checkbox" [(ngModel)]="fieldRequired" />
         {{ i18n.language() === 'French' ? 'Obligatoire' : 'Required' }}</label
@@ -162,7 +288,7 @@
         pButton
         type="button"
         (click)="addField()"
-        [disabled]="!fieldKey || !fieldEnglish || !fieldFrench"
+        [disabled]="!fieldKey || !fieldEnglish"
         [loading]="busy()"
       >
         {{ i18n.language() === 'French' ? 'Ajouter' : 'Add' }}
@@ -178,7 +304,8 @@
           <strong>{{ policy.name }}</strong
           ><span
             >{{ policy.timeZone }} · {{ policy.targets.length }}
-            {{ i18n.language() === 'French' ? 'cibles' : 'targets' }}</span
+            {{ i18n.language() === 'French' ? 'cibles' : 'targets' }} ·
+            {{ projectSetLabel(policy.projectIds) }}</span
           ><p-tag
             [value]="policy.isActive ? 'Active' : 'Inactive'"
             [severity]="policy.isActive ? 'success' : 'secondary'"
@@ -186,7 +313,7 @@
         </article>
       }
     </div>
-    <div class="form-grid">
+    <div class="form-grid sla-form">
       <input
         pInputText
         [(ngModel)]="slaName"
@@ -198,6 +325,15 @@
         [min]="0"
         suffix=" min"
         ariaLabel="SLA warning minutes"
+      />
+      <p-multiselect
+        [(ngModel)]="slaProjectIds"
+        [options]="projects()"
+        optionValue="id"
+        optionLabel="name"
+        [showClear]="true"
+        [placeholder]="i18n.language() === 'French' ? 'Tous les projets' : 'All projects'"
+        [ariaLabel]="i18n.language() === 'French' ? 'Projets' : 'Projects'"
       />
       <button
         pButton
@@ -258,42 +394,56 @@
         {{ item.storageQuotaBytes / 1073741824 | number: '1.1-1' }} GB
       </p>
       <div class="retention-grid">
-        <label for="storageQuota">{{
-          i18n.language() === 'French' ? 'Quota (octets)' : 'Quota (bytes)'
-        }}</label
-        ><p-inputnumber
-          inputId="storageQuota"
-          [(ngModel)]="item.storageQuotaBytes"
-          [min]="26214400"
-        />
-        <label for="notificationRetention">{{
-          i18n.language() === 'French' ? 'Notifications (jours)' : 'Notifications (days)'
-        }}</label
-        ><p-inputnumber
-          inputId="notificationRetention"
-          [(ngModel)]="item.notificationRetentionDays"
-          [min]="1"
-        />
-        <label for="auditRetention">{{
-          i18n.language() === 'French' ? 'Audit (jours)' : 'Audit (days)'
-        }}</label
-        ><p-inputnumber inputId="auditRetention" [(ngModel)]="item.auditRetentionDays" [min]="30" />
-        <label for="attachmentRetention">{{
-          i18n.language() === 'French' ? 'Pièces supprimées (jours)' : 'Deleted files (days)'
-        }}</label
-        ><p-inputnumber
-          inputId="attachmentRetention"
-          [(ngModel)]="item.deletedAttachmentRetentionDays"
-          [min]="1"
-        />
-        <label for="reportRetention">{{
-          i18n.language() === 'French' ? 'Rapports (jours)' : 'Reports (days)'
-        }}</label
-        ><p-inputnumber
-          inputId="reportRetention"
-          [(ngModel)]="item.reportRetentionDays"
-          [min]="1"
-        />
+        <div class="retention-field">
+          <label for="storageQuota">{{
+            i18n.language() === 'French' ? 'Quota (octets)' : 'Quota (bytes)'
+          }}</label
+          ><p-inputnumber
+            inputId="storageQuota"
+            [(ngModel)]="item.storageQuotaBytes"
+            [min]="26214400"
+          />
+        </div>
+        <div class="retention-field">
+          <label for="notificationRetention">{{
+            i18n.language() === 'French' ? 'Notifications (jours)' : 'Notifications (days)'
+          }}</label
+          ><p-inputnumber
+            inputId="notificationRetention"
+            [(ngModel)]="item.notificationRetentionDays"
+            [min]="1"
+          />
+        </div>
+        <div class="retention-field">
+          <label for="auditRetention">{{
+            i18n.language() === 'French' ? 'Audit (jours)' : 'Audit (days)'
+          }}</label
+          ><p-inputnumber
+            inputId="auditRetention"
+            [(ngModel)]="item.auditRetentionDays"
+            [min]="30"
+          />
+        </div>
+        <div class="retention-field">
+          <label for="attachmentRetention">{{
+            i18n.language() === 'French' ? 'Pièces supprimées (jours)' : 'Deleted files (days)'
+          }}</label
+          ><p-inputnumber
+            inputId="attachmentRetention"
+            [(ngModel)]="item.deletedAttachmentRetentionDays"
+            [min]="1"
+          />
+        </div>
+        <div class="retention-field">
+          <label for="reportRetention">{{
+            i18n.language() === 'French' ? 'Rapports (jours)' : 'Reports (days)'
+          }}</label
+          ><p-inputnumber
+            inputId="reportRetention"
+            [(ngModel)]="item.reportRetentionDays"
+            [min]="1"
+          />
+        </div>
       </div>
       <div class="actions">
         <button pButton type="button" (click)="saveRetention()" [loading]="busy()">

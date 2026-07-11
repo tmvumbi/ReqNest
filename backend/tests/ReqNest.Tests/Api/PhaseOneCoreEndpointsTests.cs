@@ -29,8 +29,8 @@ public sealed class PhaseOneCoreEndpointsTests(ReqNestApiFactory factory)
         var admin = await RegisterAsync(adminClient, $"admin-{suffix}@example.test", $"Company {suffix}", $"C{suffix[..5]}");
         UseSession(adminClient, admin);
 
-        var project = await CreateProjectAsync(adminClient, $"P{suffix[..5]}", "Operations", "Opérations");
-        var otherProject = await CreateProjectAsync(adminClient, $"Q{suffix[..5]}", "Web", "Web");
+        var project = await CreateProjectAsync(adminClient, $"P{suffix[..5]}", "Operations");
+        var otherProject = await CreateProjectAsync(adminClient, $"Q{suffix[..5]}", "Web");
 
         var createTicket = new CreateTicketRequest(
             project.Id,
@@ -230,7 +230,7 @@ public sealed class PhaseOneCoreEndpointsTests(ReqNestApiFactory factory)
         var client = factory.CreateClient();
         var admin = await RegisterAsync(client, $"files-{suffix}@example.test", $"Files {suffix}", $"F{suffix[..5]}");
         UseSession(client, admin);
-        var project = await CreateProjectAsync(client, $"D{suffix[..5]}", "Documents", "Documents");
+        var project = await CreateProjectAsync(client, $"D{suffix[..5]}", "Documents");
         var ticketResponse = await client.PostAsJsonAsync("/api/tickets", new CreateTicketRequest(
             project.Id,
             "Review screenshot",
@@ -294,14 +294,8 @@ public sealed class PhaseOneCoreEndpointsTests(ReqNestApiFactory factory)
             TestCancellationToken);
         Assert.Equal(HttpStatusCode.NoContent, logoUpload.StatusCode);
 
-        var exportResponse = await client.PostAsJsonAsync("/api/reports/exports", new CreateReportExportRequest(
-            "inventory",
-            new ReportFilterRequest(project.Id, null, null, null, null, null, false),
-            AppLanguage.French), TestCancellationToken);
-        Assert.Equal(HttpStatusCode.Accepted, exportResponse.StatusCode);
-        var reportExport = await ReadAsync<ReportExportResponse>(exportResponse);
         var pdf = await client.GetAsync(
-            $"/api/reports/exports/{reportExport.Id}/download",
+            $"/api/reports/inventory/pdf?projectId={project.Id}&language=French",
             TestCancellationToken);
         pdf.EnsureSuccessStatusCode();
         var pdfBytes = await pdf.Content.ReadAsByteArrayAsync(TestCancellationToken);
@@ -322,7 +316,7 @@ public sealed class PhaseOneCoreEndpointsTests(ReqNestApiFactory factory)
         Assert.Equal(
             HttpStatusCode.NotFound,
             (await foreignClient.GetAsync(
-                $"/api/reports/exports/{reportExport.Id}/download",
+                $"/api/reports/inventory/pdf?projectId={project.Id}&language=English",
                 TestCancellationToken)).StatusCode);
     }
 
@@ -338,8 +332,8 @@ public sealed class PhaseOneCoreEndpointsTests(ReqNestApiFactory factory)
         var adminClient = factory.CreateClient();
         var secondTenantAdmin = await RegisterAsync(adminClient, $"second-{suffix}@example.test", $"Second {suffix}", $"B{suffix[..5]}");
         UseSession(adminClient, secondTenantAdmin);
-        var scopedProject = await CreateProjectAsync(adminClient, $"S{suffix[..5]}", "Scoped", "Limité");
-        var hiddenProject = await CreateProjectAsync(adminClient, $"H{suffix[..5]}", "Hidden", "Caché");
+        var scopedProject = await CreateProjectAsync(adminClient, $"S{suffix[..5]}", "Scoped");
+        var hiddenProject = await CreateProjectAsync(adminClient, $"H{suffix[..5]}", "Hidden");
 
         var invitation = await ReadAsync<InvitationCreatedResponse>(await adminClient.PostAsJsonAsync(
             "/api/members/invitations",
@@ -370,7 +364,7 @@ public sealed class PhaseOneCoreEndpointsTests(ReqNestApiFactory factory)
             new UpdateMemberRolesRequest([new RoleGrantRequest(AppRole.Observer, true, [])]),
             TestCancellationToken);
         allProjectsUpdate.EnsureSuccessStatusCode();
-        var futureProject = await CreateProjectAsync(adminClient, $"F{suffix[..5]}", "Future", "Futur");
+        var futureProject = await CreateProjectAsync(adminClient, $"F{suffix[..5]}", "Future");
 
         UseSession(sharedClient, await LoginAsync(sharedClient, sharedEmail, sharedPassword), secondTenantId);
         var allProjects = await ReadAsync<IReadOnlyCollection<ProjectResponse>>(await sharedClient.GetAsync(
@@ -395,8 +389,8 @@ public sealed class PhaseOneCoreEndpointsTests(ReqNestApiFactory factory)
         var client = factory.CreateClient();
         var admin = await RegisterAsync(client, $"workflow-{suffix}@example.test", $"Workflow {suffix}", $"W{suffix[..5]}");
         UseSession(client, admin);
-        var project = await CreateProjectAsync(client, $"M{suffix[..5]}", "Mapped", "Correspondance");
-        var untouchedProject = await CreateProjectAsync(client, $"U{suffix[..5]}", "Untouched", "Inchangé");
+        var project = await CreateProjectAsync(client, $"M{suffix[..5]}", "Mapped");
+        var untouchedProject = await CreateProjectAsync(client, $"U{suffix[..5]}", "Untouched");
         var defaultWorkflow = (await ReadAsync<IReadOnlyCollection<WorkflowResponse>>(await client.GetAsync(
             "/api/workflows",
             TestCancellationToken))).Single(workflow => workflow.IsDefault);
@@ -417,8 +411,7 @@ public sealed class PhaseOneCoreEndpointsTests(ReqNestApiFactory factory)
         var retained = copied.Statuses.Where(status => status.Key != "TODO").OrderBy(status => status.Order).ToArray();
         var definitions = retained.Select((status, index) => new WorkflowStatusRequest(
             status.Key,
-            status.LabelEnglish,
-            status.LabelFrench,
+            status.Label,
             status.Category,
             index,
             status.Color,
@@ -426,8 +419,8 @@ public sealed class PhaseOneCoreEndpointsTests(ReqNestApiFactory factory)
             status.IsTerminal)).ToArray();
         var transitions = new[]
         {
-            new WorkflowTransitionRequest("IN_PROGRESS", "DONE", null, null, false),
-            new WorkflowTransitionRequest("DONE", "IN_PROGRESS", null, null, false),
+            new WorkflowTransitionRequest("IN_PROGRESS", "DONE", null, false),
+            new WorkflowTransitionRequest("DONE", "IN_PROGRESS", null, false),
         };
         var withoutMapping = await client.PutAsJsonAsync($"/api/workflows/{copied.Id}", new UpdateWorkflowRequest(
             copied.Name, copied.Description, true, definitions, transitions, new Dictionary<string, string>()),
@@ -451,13 +444,11 @@ public sealed class PhaseOneCoreEndpointsTests(ReqNestApiFactory factory)
     private static async Task<ProjectResponse> CreateProjectAsync(
         HttpClient client,
         string key,
-        string nameEnglish,
-        string nameFrench)
+        string name)
     {
         var response = await client.PostAsJsonAsync("/api/projects", new CreateProjectRequest(
             key,
-            nameEnglish,
-            nameFrench,
+            name,
             "Integration test project",
             null,
             TicketPriority.Normal,

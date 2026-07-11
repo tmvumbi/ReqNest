@@ -4,14 +4,21 @@
     <h1>{{ i18n.text('admin.usersTitle') }}</h1>
     <p>{{ i18n.text('admin.usersSummary') }}</p>
   </div>
-  <button pButton type="button" (click)="visible.set(true)">{{ i18n.text('admin.invite') }}</button>
+  <a pButton routerLink="/app/admin/users/invite">{{ i18n.text('admin.invite') }}</a>
 </header>
-<section class="content-panel">
-  <p-table [value]="members()" [tableStyle]="{ 'min-width': '64rem' }"
+@if (developmentInvitation(); as token) {
+  <div class="development-token">
+    <strong>Development invitation</strong
+    ><a [routerLink]="['/accept-invitation']" [queryParams]="{ token }"
+      >Open invitation acceptance</a
+    ><code>{{ token }}</code>
+  </div>
+}
+<section class="content-panel table-panel">
+  <p-table [value]="members()" [tableStyle]="{ 'min-width': '46rem' }"
     ><ng-template #header
       ><tr>
-        <th>{{ i18n.text('auth.displayName') }}</th>
-        <th>{{ i18n.text('auth.email') }}</th>
+        <th>{{ i18n.text('admin.member') }}</th>
         <th>{{ i18n.text('admin.role') }} · {{ i18n.text('admin.scope') }}</th>
         <th>{{ i18n.text('admin.status') }}</th>
         <th>
@@ -21,21 +28,27 @@
     ><ng-template #body let-member
       ><tr>
         <td>
-          <strong>{{ member.displayName }}</strong>
+          <div class="member-cell">
+            <span class="member-avatar" aria-hidden="true">{{ initials(member.displayName) }}</span>
+            <div>
+              <strong>{{ member.displayName }}</strong>
+              <small>{{ member.email }}</small>
+            </div>
+          </div>
         </td>
-        <td>{{ member.email }}</td>
-        <td>{{ grants(member) }}</td>
+        <td class="muted-cell">{{ grants(member) }}</td>
         <td>
-          <p-tag
-            [value]="statusLabel(member.status)"
-            [severity]="
+          <span
+            class="pill"
+            [class]="
               member.status === 'Active'
-                ? 'success'
+                ? 'pill-green'
                 : member.status === 'Invited'
-                  ? 'info'
-                  : 'secondary'
+                  ? 'pill-blue'
+                  : 'pill-slate'
             "
-          />
+            >{{ statusLabel(member.status) }}</span
+          >
         </td>
         <td>
           <div class="row-actions">
@@ -95,65 +108,11 @@
       </tr></ng-template
     ><ng-template #emptymessage
       ><tr>
-        <td colspan="5">{{ i18n.text('common.empty') }}</td>
+        <td colspan="4">{{ i18n.text('common.empty') }}</td>
       </tr></ng-template
     ></p-table
   >
 </section>
-<p-dialog
-  [header]="i18n.text('admin.invite')"
-  [visible]="visible()"
-  (visibleChange)="visible.set($event)"
-  [modal]="true"
-  [style]="{ width: 'min(40rem, 94vw)' }"
-  ><form [formGroup]="form" (ngSubmit)="invite()" class="invite-form">
-    <div class="field">
-      <label for="inviteEmail">{{ i18n.text('auth.email') }}</label
-      ><input pInputText id="inviteEmail" formControlName="email" type="email" />
-    </div>
-    <div class="field">
-      <label for="inviteName">{{ i18n.text('auth.displayName') }}</label
-      ><input pInputText id="inviteName" formControlName="displayName" />
-    </div>
-    <div class="field">
-      <label for="inviteRole">{{ i18n.text('admin.role') }}</label
-      ><p-select inputId="inviteRole" formControlName="role" [options]="roles" />
-    </div>
-    <label class="toggle-row" for="allProjects"
-      ><p-toggleswitch inputId="allProjects" formControlName="allProjects" />{{
-        i18n.text('admin.allProjects')
-      }}</label
-    >
-    @if (!form.controls.allProjects.value) {
-      <div class="field">
-        <label for="inviteProjects">{{ i18n.text('admin.selectedProjects') }}</label
-        ><p-multiselect
-          inputId="inviteProjects"
-          formControlName="projectIds"
-          [options]="projects()"
-          optionValue="id"
-          display="chip"
-          ><ng-template #item let-project>{{ projectName(project) }}</ng-template></p-multiselect
-        >
-      </div>
-    }
-    @if (developmentInvitation(); as token) {
-      <div class="development-token">
-        <strong>Development invitation</strong
-        ><a [routerLink]="['/accept-invitation']" [queryParams]="{ token }"
-          >Open invitation acceptance</a
-        ><code>{{ token }}</code>
-      </div>
-    }
-    <div class="dialog-actions">
-      <button pButton type="button" severity="secondary" [text]="true" (click)="visible.set(false)">
-        {{ i18n.text('common.cancel') }}</button
-      ><button pButton type="submit" [loading]="submitting()">
-        {{ i18n.text('admin.invite') }}
-      </button>
-    </div>
-  </form></p-dialog
->
 <p-dialog
   [header]="
     i18n.language() === 'French' ? 'Modifier les rôles et le périmètre' : 'Edit roles and scope'

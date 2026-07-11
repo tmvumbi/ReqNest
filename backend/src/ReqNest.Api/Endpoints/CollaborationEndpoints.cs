@@ -151,7 +151,6 @@ public static class CollaborationEndpoints
             access.Ticket.Id,
             $"{audit.Id}:comment",
             $"A comment was added to {access.Ticket.Key}.",
-            $"Un commentaire a été ajouté à {access.Ticket.Key}.",
             $"/app/tickets/{access.Ticket.Id}",
             access.Ticket.Id.ToString()), cancellationToken);
         await notificationService.AddAsync(new NotificationMessage(
@@ -163,7 +162,6 @@ public static class CollaborationEndpoints
             access.Ticket.Id,
             $"{audit.Id}:mention",
             $"You were mentioned on {access.Ticket.Key}.",
-            $"Vous avez été mentionné sur {access.Ticket.Key}.",
             $"/app/tickets/{access.Ticket.Id}",
             access.Ticket.Id.ToString()), cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);

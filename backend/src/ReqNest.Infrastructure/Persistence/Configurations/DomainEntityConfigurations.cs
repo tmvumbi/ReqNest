@@ -161,8 +161,7 @@ public sealed class ProjectConfiguration : IEntityTypeConfiguration<Project>
     public void Configure(EntityTypeBuilder<Project> builder)
     {
         builder.Property(entity => entity.Key).HasMaxLength(12).IsRequired();
-        builder.Property(entity => entity.NameEnglish).HasMaxLength(200).IsRequired();
-        builder.Property(entity => entity.NameFrench).HasMaxLength(200).IsRequired();
+        builder.Property(entity => entity.Name).HasMaxLength(200).IsRequired();
         builder.Property(entity => entity.Description).HasMaxLength(2000);
         builder.HasIndex(entity => new { entity.TenantId, entity.Key }).IsUnique();
         builder.HasOne(entity => entity.Tenant)
@@ -199,8 +198,7 @@ public sealed class WorkflowStatusConfiguration : IEntityTypeConfiguration<Workf
     public void Configure(EntityTypeBuilder<WorkflowStatus> builder)
     {
         builder.Property(entity => entity.Key).HasMaxLength(40).IsRequired();
-        builder.Property(entity => entity.LabelEnglish).HasMaxLength(100).IsRequired();
-        builder.Property(entity => entity.LabelFrench).HasMaxLength(100).IsRequired();
+        builder.Property(entity => entity.Label).HasMaxLength(100).IsRequired();
         builder.Property(entity => entity.Color).HasMaxLength(20).IsRequired();
         builder.HasIndex(entity => new { entity.WorkflowId, entity.Key }).IsUnique();
         builder.HasIndex(entity => new { entity.WorkflowId, entity.Order }).IsUnique();
@@ -211,8 +209,7 @@ public sealed class WorkflowTransitionConfiguration : IEntityTypeConfiguration<W
 {
     public void Configure(EntityTypeBuilder<WorkflowTransition> builder)
     {
-        builder.Property(entity => entity.NameEnglish).HasMaxLength(120);
-        builder.Property(entity => entity.NameFrench).HasMaxLength(120);
+        builder.Property(entity => entity.Name).HasMaxLength(120);
         builder.HasIndex(entity => new
         {
             entity.WorkflowId,
@@ -348,8 +345,7 @@ public sealed class TicketTypeDefinitionConfiguration : IEntityTypeConfiguration
     public void Configure(EntityTypeBuilder<TicketTypeDefinition> builder)
     {
         builder.Property(entity => entity.Key).HasMaxLength(80).IsRequired();
-        builder.Property(entity => entity.LabelEnglish).HasMaxLength(120).IsRequired();
-        builder.Property(entity => entity.LabelFrench).HasMaxLength(120).IsRequired();
+        builder.Property(entity => entity.Label).HasMaxLength(120).IsRequired();
         builder.HasIndex(entity => new { entity.TenantId, entity.ProjectId, entity.Key });
     }
 }
@@ -359,8 +355,7 @@ public sealed class TicketPriorityDefinitionConfiguration : IEntityTypeConfigura
     public void Configure(EntityTypeBuilder<TicketPriorityDefinition> builder)
     {
         builder.Property(entity => entity.Key).HasMaxLength(80).IsRequired();
-        builder.Property(entity => entity.LabelEnglish).HasMaxLength(120).IsRequired();
-        builder.Property(entity => entity.LabelFrench).HasMaxLength(120).IsRequired();
+        builder.Property(entity => entity.Label).HasMaxLength(120).IsRequired();
         builder.Property(entity => entity.Color).HasMaxLength(20).IsRequired();
         builder.HasIndex(entity => new { entity.TenantId, entity.ProjectId, entity.Key });
     }
@@ -371,10 +366,10 @@ public sealed class CustomFieldDefinitionConfiguration : IEntityTypeConfiguratio
     public void Configure(EntityTypeBuilder<CustomFieldDefinition> builder)
     {
         builder.Property(entity => entity.Key).HasMaxLength(80).IsRequired();
-        builder.Property(entity => entity.LabelEnglish).HasMaxLength(120).IsRequired();
-        builder.Property(entity => entity.LabelFrench).HasMaxLength(120).IsRequired();
+        builder.Property(entity => entity.Label).HasMaxLength(120).IsRequired();
         builder.Property(entity => entity.OptionsJson).HasColumnType("jsonb").IsRequired();
-        builder.HasIndex(entity => new { entity.TenantId, entity.ProjectId, entity.Key });
+        builder.Property(entity => entity.ProjectIds).HasColumnType("uuid[]");
+        builder.HasIndex(entity => new { entity.TenantId, entity.Key });
     }
 }
 
@@ -394,8 +389,9 @@ public sealed class SlaPolicyConfiguration : IEntityTypeConfiguration<SlaPolicy>
         builder.Property(entity => entity.Name).HasMaxLength(160).IsRequired();
         builder.Property(entity => entity.TimeZone).HasMaxLength(100).IsRequired();
         builder.Property(entity => entity.PauseStatusKeys).HasColumnType("text[]");
+        builder.Property(entity => entity.ProjectIds).HasColumnType("uuid[]");
         builder.HasIndex(entity => new { entity.TenantId, entity.Name }).IsUnique();
-        builder.HasIndex(entity => new { entity.TenantId, entity.ProjectId, entity.IsActive });
+        builder.HasIndex(entity => new { entity.TenantId, entity.IsActive });
     }
 }
 
@@ -451,8 +447,7 @@ public sealed class NotificationConfiguration : IEntityTypeConfiguration<Notific
     public void Configure(EntityTypeBuilder<Notification> builder)
     {
         builder.Property(entity => entity.EventKey).HasMaxLength(160).IsRequired();
-        builder.Property(entity => entity.SummaryEnglish).HasMaxLength(500).IsRequired();
-        builder.Property(entity => entity.SummaryFrench).HasMaxLength(500).IsRequired();
+        builder.Property(entity => entity.Summary).HasMaxLength(500).IsRequired();
         builder.Property(entity => entity.DeepLink).HasMaxLength(1000).IsRequired();
         builder.Property(entity => entity.GroupKey).HasMaxLength(160);
         builder.HasIndex(entity => new { entity.RecipientUserId, entity.EventKey }).IsUnique();

@@ -52,15 +52,13 @@ public static class RequesterPortalEndpoints
             .Select(entity => new PortalProjectResponse(
                 entity.Id,
                 entity.Key,
-                entity.NameEnglish,
-                entity.NameFrench,
+                entity.Name,
                 entity.RequesterPortalEnabled))
             .ToArrayAsync(cancellationToken);
         return TypedResults.Ok(new PortalSettingsResponse(
             tenant.Id,
             tenant.RequesterPortalEnabled,
-            tenant.RequesterPortalIntroductionEnglish,
-            tenant.RequesterPortalIntroductionFrench,
+            tenant.RequesterPortalIntroduction,
             projects));
     }
 
@@ -76,15 +74,14 @@ public static class RequesterPortalEndpoints
             return authorization is null ? ApiProblems.TenantRequired(context) : ApiProblems.Forbidden(context);
         }
 
-        if (request.IntroductionEnglish?.Length > 4000 || request.IntroductionFrench?.Length > 4000)
+        if (request.Introduction?.Length > 4000)
         {
             return ApiProblems.Validation(context, "Portal introduction text is too long.");
         }
 
         var tenant = await dbContext.Tenants.SingleAsync(cancellationToken);
         tenant.RequesterPortalEnabled = request.IsEnabled;
-        tenant.RequesterPortalIntroductionEnglish = CleanOptional(request.IntroductionEnglish);
-        tenant.RequesterPortalIntroductionFrench = CleanOptional(request.IntroductionFrench);
+        tenant.RequesterPortalIntroduction = CleanOptional(request.Introduction);
         AddAudit(dbContext, context, tenant.Id, "portal.settings.updated", tenant.Id);
         await dbContext.SaveChangesAsync(cancellationToken);
         return TypedResults.NoContent();
@@ -133,8 +130,7 @@ public static class RequesterPortalEndpoints
             .Select(entity => new PortalProjectResponse(
                 entity.Id,
                 entity.Key,
-                entity.NameEnglish,
-                entity.NameFrench,
+                entity.Name,
                 entity.RequesterPortalEnabled))
             .ToArrayAsync(cancellationToken);
         return TypedResults.Ok(new PublicPortalResponse(
@@ -143,8 +139,7 @@ public static class RequesterPortalEndpoints
             tenant.ShortName,
             tenant.PrimaryColor,
             tenant.DefaultLanguage,
-            tenant.RequesterPortalIntroductionEnglish,
-            tenant.RequesterPortalIntroductionFrench,
+            tenant.RequesterPortalIntroduction,
             projects));
     }
 
@@ -299,7 +294,6 @@ public static class RequesterPortalEndpoints
             ticket.Id,
             audit.Id.ToString(),
             $"{ticket.Key} was submitted through the requester portal.",
-            $"{ticket.Key} a été soumis depuis le portail demandeur.",
             $"/app/tickets/{ticket.Id}",
             ticket.Id.ToString()), cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -329,10 +323,8 @@ public static class RequesterPortalEndpoints
                 entity.Key,
                 entity.Title,
                 entity.Description,
-                entity.Project.NameEnglish,
-                entity.Project.NameFrench,
-                entity.WorkflowStatus.LabelEnglish,
-                entity.WorkflowStatus.LabelFrench,
+                entity.Project.Name,
+                entity.WorkflowStatus.Label,
                 entity.SlaState,
                 entity.CreatedAt,
                 entity.UpdatedAt))
@@ -404,7 +396,6 @@ public static class RequesterPortalEndpoints
             ticket.Id,
             comment.Id.ToString(),
             $"{access.RequesterName} commented on {ticket.Key}.",
-            $"{access.RequesterName} a commenté {ticket.Key}.",
             $"/app/tickets/{ticket.Id}",
             ticket.Id.ToString()), cancellationToken);
         var audit = new AuditEvent
@@ -498,23 +489,20 @@ public static class RequesterPortalEndpoints
 
 public sealed record UpdatePortalSettingsRequest(
     bool IsEnabled,
-    string? IntroductionEnglish,
-    string? IntroductionFrench);
+    string? Introduction);
 
 public sealed record UpdatePortalProjectRequest(bool IsEnabled);
 
 public sealed record PortalProjectResponse(
     Guid Id,
     string Key,
-    string NameEnglish,
-    string NameFrench,
+    string Name,
     bool IsEnabled);
 
 public sealed record PortalSettingsResponse(
     Guid TenantId,
     bool IsEnabled,
-    string? IntroductionEnglish,
-    string? IntroductionFrench,
+    string? Introduction,
     IReadOnlyCollection<PortalProjectResponse> Projects);
 
 public sealed record PublicPortalResponse(
@@ -523,8 +511,7 @@ public sealed record PublicPortalResponse(
     string CompanyShortName,
     string PrimaryColor,
     AppLanguage DefaultLanguage,
-    string? IntroductionEnglish,
-    string? IntroductionFrench,
+    string? Introduction,
     IReadOnlyCollection<PortalProjectResponse> Projects);
 
 public sealed record SubmitRequesterTicketRequest(
@@ -544,10 +531,8 @@ public sealed record RequesterTicketResponse(
     string Key,
     string Title,
     string Description,
-    string ProjectNameEnglish,
-    string ProjectNameFrench,
-    string StatusEnglish,
-    string StatusFrench,
+    string ProjectName,
+    string Status,
     SlaState SlaState,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);

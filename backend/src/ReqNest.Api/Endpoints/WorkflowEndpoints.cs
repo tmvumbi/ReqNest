@@ -20,11 +20,44 @@ public static class WorkflowEndpoints
         group.MapPost("/", CreateAsync);
         group.MapPut("/{workflowId:guid}", UpdateAsync);
         group.MapPost("/{workflowId:guid}/copy-to-project/{projectId:guid}", CopyToProjectAsync);
+        group.MapGet("/{workflowId:guid}/status-usage", GetStatusUsageAsync);
 
         endpoints.MapPut("/api/projects/{projectId:guid}/workflow", AssignProjectWorkflowAsync)
             .RequireAuthorization()
             .WithTags("Workflows");
         return endpoints;
+    }
+
+    private static async Task<IResult> GetStatusUsageAsync(
+        Guid workflowId,
+        HttpContext httpContext,
+        ReqNestDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        if (httpContext.TenantAuthorization() is null)
+        {
+            return ApiProblems.TenantRequired(httpContext);
+        }
+
+        var statuses = await dbContext.WorkflowStatuses.AsNoTracking()
+            .Where(entity => entity.WorkflowId == workflowId)
+            .Select(entity => new { entity.Id, entity.Key })
+            .ToArrayAsync(cancellationToken);
+        if (statuses.Length == 0)
+        {
+            return ApiProblems.NotFound(httpContext, "Workflow");
+        }
+
+        var statusIds = statuses.Select(status => status.Id).ToArray();
+        var counts = await dbContext.Tickets.AsNoTracking()
+            .Where(entity => statusIds.Contains(entity.WorkflowStatusId))
+            .GroupBy(entity => entity.WorkflowStatusId)
+            .Select(group => new { StatusId = group.Key, Count = group.Count() })
+            .ToArrayAsync(cancellationToken);
+        var usage = statuses.ToDictionary(
+            status => status.Key,
+            status => counts.FirstOrDefault(count => count.StatusId == status.Id)?.Count ?? 0);
+        return TypedResults.Ok(usage);
     }
 
     private static async Task<IResult> UpdateAsync(
@@ -114,8 +147,7 @@ public static class WorkflowEndpoints
                 dbContext.WorkflowStatuses.Add(status);
             }
 
-            status.LabelEnglish = definition.LabelEnglish.Trim();
-            status.LabelFrench = definition.LabelFrench.Trim();
+            status.Label = definition.Label.Trim();
             status.Category = definition.Category;
             status.Order = definition.Order;
             status.Color = definition.Color;
@@ -152,8 +184,7 @@ public static class WorkflowEndpoints
             Workflow = workflow,
             FromStatusId = statusEntities[entity.FromKey.Trim().ToUpperInvariant()].Id,
             ToStatusId = statusEntities[entity.ToKey.Trim().ToUpperInvariant()].Id,
-            NameEnglish = entity.NameEnglish?.Trim(),
-            NameFrench = entity.NameFrench?.Trim(),
+            Name = entity.Name?.Trim(),
             CommentRequired = entity.CommentRequired,
         }).ToList();
         dbContext.WorkflowTransitions.AddRange(workflow.Transitions);
@@ -270,8 +301,7 @@ public static class WorkflowEndpoints
             projectId,
             source.Statuses.OrderBy(entity => entity.Order).Select(entity => new WorkflowStatusRequest(
                 entity.Key,
-                entity.LabelEnglish,
-                entity.LabelFrench,
+                entity.Label,
                 entity.Category,
                 entity.Order,
                 entity.Color,
@@ -280,8 +310,7 @@ public static class WorkflowEndpoints
             source.Transitions.Select(entity => new WorkflowTransitionRequest(
                 source.Statuses.Single(status => status.Id == entity.FromStatusId).Key,
                 source.Statuses.Single(status => status.Id == entity.ToStatusId).Key,
-                entity.NameEnglish,
-                entity.NameFrench,
+                entity.Name,
                 entity.CommentRequired)).ToArray());
         var copy = BuildWorkflow(authorization.TenantId, createRequest);
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
@@ -381,7 +410,7 @@ public static class WorkflowEndpoints
         var keys = statuses.Select(entity => entity.Key.Trim().ToUpperInvariant()).ToArray();
         if (keys.Distinct(StringComparer.Ordinal).Count() != keys.Length ||
             statuses.Select(entity => entity.Order).Distinct().Count() != statuses.Count ||
-            statuses.Any(entity => string.IsNullOrWhiteSpace(entity.LabelEnglish) || string.IsNullOrWhiteSpace(entity.LabelFrench)))
+            statuses.Any(entity => string.IsNullOrWhiteSpace(entity.Label)))
         {
             return "Status keys and order values must be unique and localized labels are required.";
         }
@@ -413,8 +442,7 @@ public static class WorkflowEndpoints
                 WorkflowId = workflow.Id,
                 Workflow = workflow,
                 Key = entity.Key.Trim().ToUpperInvariant(),
-                LabelEnglish = entity.LabelEnglish.Trim(),
-                LabelFrench = entity.LabelFrench.Trim(),
+                Label = entity.Label.Trim(),
                 Category = entity.Category,
                 Order = entity.Order,
                 Color = entity.Color,
@@ -431,8 +459,7 @@ public static class WorkflowEndpoints
             FromStatus = statuses[entity.FromKey.Trim().ToUpperInvariant()],
             ToStatusId = statuses[entity.ToKey.Trim().ToUpperInvariant()].Id,
             ToStatus = statuses[entity.ToKey.Trim().ToUpperInvariant()],
-            NameEnglish = entity.NameEnglish?.Trim(),
-            NameFrench = entity.NameFrench?.Trim(),
+            Name = entity.Name?.Trim(),
             CommentRequired = entity.CommentRequired,
         }).ToArray();
         return workflow;
@@ -464,8 +491,7 @@ public static class WorkflowEndpoints
         entity.Statuses.OrderBy(status => status.Order).Select(status => new WorkflowStatusResponse(
             status.Id,
             status.Key,
-            status.LabelEnglish,
-            status.LabelFrench,
+            status.Label,
             status.Category,
             status.Order,
             status.Color,
@@ -475,15 +501,13 @@ public static class WorkflowEndpoints
             transition.Id,
             transition.FromStatusId,
             transition.ToStatusId,
-            transition.NameEnglish,
-            transition.NameFrench,
+            transition.Name,
             transition.CommentRequired)).ToArray());
 }
 
 public sealed record WorkflowStatusRequest(
     string Key,
-    string LabelEnglish,
-    string LabelFrench,
+    string Label,
     WorkflowStatusCategory Category,
     int Order,
     string Color,
@@ -493,8 +517,7 @@ public sealed record WorkflowStatusRequest(
 public sealed record WorkflowTransitionRequest(
     string FromKey,
     string ToKey,
-    string? NameEnglish,
-    string? NameFrench,
+    string? Name,
     bool CommentRequired);
 
 public sealed record CreateWorkflowRequest(
@@ -523,8 +546,7 @@ public sealed record ProjectWorkflowAssignmentResponse(Guid ProjectId, Guid Work
 public sealed record WorkflowStatusResponse(
     Guid Id,
     string Key,
-    string LabelEnglish,
-    string LabelFrench,
+    string Label,
     WorkflowStatusCategory Category,
     int Order,
     string Color,
@@ -535,8 +557,7 @@ public sealed record WorkflowTransitionResponse(
     Guid Id,
     Guid FromStatusId,
     Guid ToStatusId,
-    string? NameEnglish,
-    string? NameFrench,
+    string? Name,
     bool CommentRequired);
 
 public sealed record WorkflowResponse(

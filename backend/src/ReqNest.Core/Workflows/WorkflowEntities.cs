@@ -43,9 +43,8 @@ public sealed class WorkflowStatus : Entity
 
     public string Key { get; set; } = string.Empty;
 
-    public string LabelEnglish { get; set; } = string.Empty;
+    public string Label { get; set; } = string.Empty;
 
-    public string LabelFrench { get; set; } = string.Empty;
 
     public WorkflowStatusCategory Category { get; set; }
 
@@ -74,9 +73,8 @@ public sealed class WorkflowTransition : Entity
 
     public WorkflowStatus ToStatus { get; set; } = null!;
 
-    public string? NameEnglish { get; set; }
+    public string? Name { get; set; }
 
-    public string? NameFrench { get; set; }
 
     public bool CommentRequired { get; set; }
 }

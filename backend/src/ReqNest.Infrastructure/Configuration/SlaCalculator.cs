@@ -25,9 +25,11 @@ public sealed class SlaCalculator(ReqNestDbContext dbContext) : ISlaCalculator
         var policy = project.SlaPolicyId is not null
             ? await policies.SingleOrDefaultAsync(entity => entity.Id == project.SlaPolicyId, cancellationToken)
             : await policies
-                .OrderByDescending(entity => entity.ProjectId == projectId)
+                .OrderByDescending(entity => entity.ProjectIds.Contains(projectId))
                 .ThenByDescending(entity => entity.IsDefault)
-                .FirstOrDefaultAsync(entity => entity.ProjectId == projectId || entity.ProjectId == null, cancellationToken);
+                .FirstOrDefaultAsync(
+                    entity => entity.ProjectIds.Length == 0 || entity.ProjectIds.Contains(projectId),
+                    cancellationToken);
         var target = policy?.Targets.SingleOrDefault(entity => entity.PriorityKey == priorityKey);
         if (policy is null || target is null)
         {

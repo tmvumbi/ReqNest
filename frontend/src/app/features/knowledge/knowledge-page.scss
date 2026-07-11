@@ -1,63 +1,79 @@
-.knowledge-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(24rem, 0.85fr);
-  gap: 1.5rem;
-  align-items: start;
-}
 .toolbar {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.6rem;
   flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--app-border);
 }
-.toolbar input {
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
   flex: 1;
   min-width: 12rem;
+  max-width: 22rem;
+  padding: 0.38rem 0.65rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.55rem;
+  background: var(--app-sunken);
+  color: var(--app-text-subtle);
+}
+.search-box:focus-within {
+  border-color: var(--p-primary-color);
+  background: var(--app-surface);
+}
+.search-box input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--app-text);
+  font-size: 0.85rem;
+}
+.search-box input:focus {
+  outline: none;
 }
 .article-list {
   display: grid;
-  gap: 0.8rem;
-  margin-top: 1.25rem;
 }
-.article-list article {
-  padding: 1rem;
-  border: 1px solid var(--app-border);
-  border-radius: 0.8rem;
-}
-.article-list article.selected {
-  border-color: var(--p-primary-color);
-}
-.article-list h2 {
-  margin: 0.7rem 0 0.2rem;
-  font-size: 1.15rem;
-}
-.article-list small {
-  color: var(--app-text-muted);
-}
-.actions {
+.article-row {
   display: flex;
-  gap: 0.5rem;
-  margin-top: 1rem;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.5rem;
+  border-radius: 0.5rem;
+  color: var(--app-text);
+  text-decoration: none;
 }
-.editor form,
-.editor label {
+.article-row:hover {
+  background: var(--app-sunken);
+}
+.article-copy {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.05rem;
+  flex: 1;
+  min-width: 0;
 }
-.editor form {
-  gap: 1rem;
+.article-copy strong {
+  font-size: 0.88rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.split {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.8rem;
+.article-copy small {
+  color: var(--app-text-subtle);
+  font-size: 0.75rem;
 }
-input,
-p-select {
-  width: 100%;
+.article-row time {
+  color: var(--app-text-subtle);
+  font-size: 0.76rem;
+  white-space: nowrap;
 }
-@media (max-width: 960px) {
-  .knowledge-layout,
-  .split {
-    grid-template-columns: 1fr;
-  }
+p-message {
+  display: block;
+  margin-bottom: 0.85rem;
 }

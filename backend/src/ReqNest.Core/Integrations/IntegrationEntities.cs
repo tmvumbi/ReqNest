@@ -228,13 +228,11 @@ public sealed class KnowledgeArticle : Entity
 
     public string Slug { get; set; } = string.Empty;
 
-    public string TitleEnglish { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
 
-    public string TitleFrench { get; set; } = string.Empty;
 
-    public string BodyEnglish { get; set; } = string.Empty;
+    public string Body { get; set; } = string.Empty;
 
-    public string BodyFrench { get; set; } = string.Empty;
 
     public string SearchText { get; set; } = string.Empty;
 

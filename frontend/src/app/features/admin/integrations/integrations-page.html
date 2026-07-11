@@ -5,19 +5,13 @@
     <p>
       {{
         text(
-          'Safely connect requester channels, automation, identity, and optional assistance.',
-          "Connectez en toute sécurité les canaux demandeurs, l'automatisation, l'identité et l'assistance facultative."
+          'Safely connect requester channels, automation, and optional assistance.',
+          "Connectez en toute sécurité les canaux demandeurs, l'automatisation et l'assistance facultative."
         )
       }}
     </p>
   </div>
 </header>
-@if (error()) {
-  <p-message severity="error">{{ error() }}</p-message>
-}
-@if (success()) {
-  <p-message severity="success">{{ success() }}</p-message>
-}
 @if (oneTimeSecret()) {
   <p-message severity="warn"
     ><strong>{{
@@ -40,46 +34,47 @@
           <p class="eyebrow">01</p>
           <h2>{{ text('Requester portal', 'Portail demandeur') }}</h2>
         </div>
-        <p-checkbox [(ngModel)]="p.isEnabled" [binary]="true" [inputId]="'portalEnabled'" /><label
-          for="portalEnabled"
-          >{{ text('Enabled', 'Activé') }}</label
-        >
-      </div>
-      <div class="split">
-        <label
-          >English introduction<textarea
-            pTextarea
-            [(ngModel)]="p.introductionEnglish"
-            rows="4"
-          ></textarea></label
-        ><label
-          >Introduction française<textarea
-            pTextarea
-            [(ngModel)]="p.introductionFrench"
-            rows="4"
-          ></textarea>
+        <label class="toggle" for="portalEnabled">
+          <p-checkbox [(ngModel)]="p.isEnabled" [binary]="true" inputId="portalEnabled" />
+          {{ text('Enabled', 'Activé') }}
         </label>
       </div>
-      <div class="project-toggles">
-        @for (project of p.projects; track project.id) {
-          <p-checkbox
-            [(ngModel)]="project.isEnabled"
-            [binary]="true"
-            [inputId]="'portalProject-' + project.id"
-          />
-          <label [for]="'portalProject-' + project.id"
-            >{{ project.key }} · {{ text(project.nameEnglish, project.nameFrench) }}</label
-          >
+      <div class="field">
+        <label for="portalIntroduction">{{ text('Introduction', 'Introduction') }}</label>
+        <textarea
+          pTextarea
+          id="portalIntroduction"
+          [(ngModel)]="p.introduction"
+          rows="4"
+        ></textarea>
+      </div>
+      <div class="field">
+        <span class="field-label">{{
+          text('Projects available in the portal', 'Projets disponibles dans le portail')
+        }}</span>
+        <div class="project-toggles">
+          @for (project of p.projects; track project.id) {
+            <label class="toggle" [for]="'portalProject-' + project.id">
+              <p-checkbox
+                [(ngModel)]="project.isEnabled"
+                [binary]="true"
+                [inputId]="'portalProject-' + project.id"
+              />
+              {{ project.key }} · {{ project.name }}
+            </label>
+          }
+        </div>
+      </div>
+      <div class="card-actions">
+        <button pButton type="button" (click)="savePortal()" [loading]="busy()">
+          {{ text('Save portal', 'Enregistrer le portail') }}
+        </button>
+        @if (p.isEnabled) {
+          <a class="portal-link" [href]="'/portal/' + p.tenantId" target="_blank">{{
+            text('Open public portal ↗', 'Ouvrir le portail public ↗')
+          }}</a>
         }
       </div>
-      <button pButton type="button" (click)="savePortal()" [loading]="busy()">
-        {{ text('Save portal', 'Enregistrer le portail') }}
-      </button>
-      @if (p.isEnabled) {
-        <a [href]="'/portal/' + p.tenantId" target="_blank">{{
-          text('Open public portal ↗', 'Ouvrir le portail public ↗')
-        }}</a>
-      }
     </section>
   }
   <section class="content-panel">
@@ -229,57 +224,6 @@
         /><small>{{ delivery.attempts }} {{ text('attempts', 'tentatives') }}</small>
       }
     </div>
-  </section>
-  <section class="content-panel">
-    <p class="eyebrow">05</p>
-    <h2>{{ text('Single sign-on (OIDC)', 'Authentification unique (OIDC)') }}</h2>
-    <form (ngSubmit)="saveSso()" class="form">
-      <div class="split">
-        <label
-          >Authority<input
-            pInputText
-            [(ngModel)]="sso.authority"
-            name="authority"
-            placeholder="https://login.example.com/tenant" /></label
-        ><label>Client ID<input pInputText [(ngModel)]="sso.clientId" name="clientId" /></label>
-      </div>
-      <label
-        >Client secret<input
-          pInputText
-          type="password"
-          [(ngModel)]="sso.clientSecret"
-          name="clientSecret" /></label
-      ><label
-        >{{ text('Allowed email domains', 'Domaines de messagerie autorisés')
-        }}<input
-          pInputText
-          [(ngModel)]="sso.domains"
-          name="domains"
-          placeholder="example.com, subsidiary.com"
-      /></label>
-      <div class="checks">
-        <p-checkbox
-          [(ngModel)]="sso.isEnabled"
-          name="ssoEnabled"
-          [binary]="true"
-          inputId="ssoEnabled"
-        /><label for="ssoEnabled">{{ text('Enable SSO', 'Activer le SSO') }}</label>
-        <p-checkbox
-          [(ngModel)]="sso.requireSso"
-          name="requireSso"
-          [binary]="true"
-          inputId="requireSso"
-        /><label for="requireSso">{{
-          text('Require SSO for this tenant', 'Exiger le SSO pour ce client')
-        }}</label>
-      </div>
-      <div>
-        <button pButton type="submit">{{ text('Save SSO', 'Enregistrer le SSO') }}</button
-        ><button pButton type="button" severity="secondary" [outlined]="true" (click)="testSso()">
-          {{ text('Test discovery', 'Tester la découverte') }}
-        </button>
-      </div>
-    </form>
   </section>
   <section class="content-panel">
     <p class="eyebrow">06</p>

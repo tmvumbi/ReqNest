@@ -121,11 +121,11 @@ export class TicketCreatePage {
   }
 
   projectName(project: Project): string {
-    return this.i18n.language() === 'French' ? project.nameFrench : project.nameEnglish;
+    return project.name;
   }
 
-  definitionLabel(definition: TicketTypeDefinition): string {
-    return this.i18n.language() === 'French' ? definition.labelFrench : definition.labelEnglish;
+  definitionLabel(definition: { label: string }): string {
+    return definition.label;
   }
 
   activeDefinitions<T extends TicketTypeDefinition>(items: T[], projectId: string): T[] {
@@ -137,7 +137,15 @@ export class TicketCreatePage {
   }
 
   fields(projectId: string): CustomFieldDefinition[] {
-    return this.activeDefinitions(this.schema()?.customFields ?? [], projectId);
+    const byKey = new Map<string, CustomFieldDefinition>();
+    const relevant = (this.schema()?.customFields ?? []).filter(
+      (item) =>
+        item.isActive && (item.projectIds.length === 0 || item.projectIds.includes(projectId)),
+    );
+    for (const item of relevant) {
+      if (!byKey.has(item.key) || item.projectIds.includes(projectId)) byKey.set(item.key, item);
+    }
+    return [...byKey.values()].sort((a, b) => a.order - b.order);
   }
 
   choices(field: CustomFieldDefinition): string[] {

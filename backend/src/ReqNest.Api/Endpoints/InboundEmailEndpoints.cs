@@ -183,7 +183,6 @@ public static class InboundEmailEndpoints
             eventType == "ticket.created" ? NotificationType.TicketAssigned : NotificationType.TicketCommented,
             ticket.ProjectId, ticket.Id, audit.Id.ToString(),
             eventType == "ticket.created" ? $"{ticket.Key} was created from email." : $"A requester replied to {ticket.Key} by email.",
-            eventType == "ticket.created" ? $"{ticket.Key} a été créé depuis un courriel." : $"Un demandeur a répondu à {ticket.Key} par courriel.",
             $"/app/tickets/{ticket.Id}", ticket.Id.ToString()), cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);

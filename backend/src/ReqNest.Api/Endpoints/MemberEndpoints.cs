@@ -143,7 +143,6 @@ public static class MemberEndpoints
             null,
             audit.Id.ToString(),
             "You were invited to a company in ReqNest.",
-            "Vous avez été invité à rejoindre une entreprise dans ReqNest.",
             "/accept-invitation",
             membership.Id.ToString()), cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -320,7 +319,6 @@ public static class MemberEndpoints
             null,
             audit.Id.ToString(),
             "Your roles or project access changed.",
-            "Vos rôles ou accès aux projets ont changé.",
             "/settings/profile",
             membership.Id.ToString()), cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);

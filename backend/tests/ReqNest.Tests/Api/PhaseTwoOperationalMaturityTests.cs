@@ -33,19 +33,18 @@ public sealed class PhaseTwoOperationalMaturityTests(ReqNestApiFactory factory)
 
         var type = await ReadAsync<TicketTypeDefinitionResponse>(await client.PostAsJsonAsync(
             "/api/configuration/ticket-schema/types",
-            new UpsertTicketTypeDefinitionRequest(project.Id, "CHANGE", "Change", "Changement", 10, true),
+            new UpsertTicketTypeDefinitionRequest(project.Id, "CHANGE", "Change", 10, true),
             CancellationToken));
         var priority = await ReadAsync<TicketPriorityDefinitionResponse>(await client.PostAsJsonAsync(
             "/api/configuration/ticket-schema/priorities",
-            new UpsertTicketPriorityDefinitionRequest(project.Id, "P1", "Critical", "Critique", "#DC2626", 100, 10, true),
+            new UpsertTicketPriorityDefinitionRequest(project.Id, "P1", "Critical", "#DC2626", 100, 10, true),
             CancellationToken));
         var field = await ReadAsync<CustomFieldDefinitionResponse>(await client.PostAsJsonAsync(
             "/api/configuration/ticket-schema/custom-fields",
             new UpsertCustomFieldDefinitionRequest(
-                project.Id,
+                [project.Id],
                 "ENVIRONMENT",
                 "Environment",
-                "Environnement",
                 CustomFieldKind.Choice,
                 true,
                 true,
@@ -59,7 +58,7 @@ public sealed class PhaseTwoOperationalMaturityTests(ReqNestApiFactory factory)
         var sla = await ReadAsync<SlaPolicyResponse>(await client.PostAsJsonAsync(
             "/api/configuration/sla-policies",
             new UpsertSlaPolicyRequest(
-                project.Id,
+                [project.Id],
                 "Critical support",
                 "Africa/Johannesburg",
                 false,
@@ -172,56 +171,6 @@ public sealed class PhaseTwoOperationalMaturityTests(ReqNestApiFactory factory)
         csv.EnsureSuccessStatusCode();
         Assert.Equal("text/csv", csv.Content.Headers.ContentType?.MediaType);
         Assert.Contains("Nombre", await csv.Content.ReadAsStringAsync(CancellationToken), StringComparison.Ordinal);
-        var schedule = await ReadAsync<ReportScheduleResponse>(await client.PostAsJsonAsync(
-            "/api/reports/schedules",
-            new UpsertReportScheduleRequest(
-                project.Id,
-                "Weekly inventory",
-                "inventory",
-                JsonSerializer.SerializeToElement(new ReportFilterRequest(project.Id, null, null, null, null, null, false)),
-                AppLanguage.English,
-                ReportExportFormat.Csv,
-                ReportScheduleFrequency.Weekly,
-                true,
-                DateTimeOffset.UtcNow.AddDays(1)),
-            CancellationToken));
-        Assert.True(schedule.IsActive);
-        var scheduledRun = await client.PostAsync($"/api/reports/schedules/{schedule.Id}/run", null, CancellationToken);
-        scheduledRun.EnsureSuccessStatusCode();
-        Assert.Equal("text/csv", scheduledRun.Content.Headers.ContentType?.MediaType);
-        await using (var scope = factory.Services.CreateAsyncScope())
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<ReqNestDbContext>();
-            await dbContext.ReportSchedules.IgnoreQueryFilters()
-                .Where(entity => entity.Id == schedule.Id)
-                .ExecuteUpdateAsync(
-                    setters => setters
-                        .SetProperty(entity => entity.LastRunAt, (DateTimeOffset?)null)
-                        .SetProperty(entity => entity.NextRunAt, DateTimeOffset.UtcNow.AddMinutes(-1)),
-                    CancellationToken);
-        }
-
-        var scheduleWorker = new ReportScheduleWorker(
-            factory.Services.GetRequiredService<IServiceScopeFactory>(),
-            NullLogger<ReportScheduleWorker>.Instance);
-        await scheduleWorker.StartAsync(CancellationToken);
-        var workerCompleted = false;
-        for (var attempt = 0; attempt < 40 && !workerCompleted; attempt++)
-        {
-            await Task.Delay(50, CancellationToken);
-            await using var scope = factory.Services.CreateAsyncScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<ReqNestDbContext>();
-            workerCompleted = await dbContext.ReportSchedules.IgnoreQueryFilters()
-                .AnyAsync(entity => entity.Id == schedule.Id && entity.LastRunAt != null, CancellationToken);
-        }
-
-        await scheduleWorker.StopAsync(CancellationToken);
-        Assert.True(workerCompleted);
-        var reportNotifications = await ReadAsync<PagedNotificationResponse>(await client.GetAsync(
-            "/api/notifications?type=ReportReady",
-            CancellationToken));
-        Assert.Contains(reportNotifications.Items, item => item.Type == Core.Notifications.NotificationType.ReportReady);
-
         var retention = await ReadAsync<RetentionSettingsResponse>(await client.GetAsync(
             "/api/operations/retention",
             CancellationToken));
@@ -346,7 +295,7 @@ public sealed class PhaseTwoOperationalMaturityTests(ReqNestApiFactory factory)
     private static async Task<ProjectResponse> CreateProjectAsync(HttpClient client, string key) =>
         await ReadAsync<ProjectResponse>(await client.PostAsJsonAsync(
             "/api/projects",
-            new CreateProjectRequest(key, "Operations", "Opérations", "Phase two project", null, TicketPriority.Normal, null),
+            new CreateProjectRequest(key, "Operations", "Phase two project", null, TicketPriority.Normal, null),
             CancellationToken));
 
     private static async Task<AuthenticatedSession> RegisterAsync(HttpClient client, string email, string company, string shortName) =>

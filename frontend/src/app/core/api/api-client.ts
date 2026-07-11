@@ -2,6 +2,10 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import {
   AppLanguage,
+  AssistantConversationDetail,
+  AssistantConversationSummary,
+  AssistantMessage,
+  AssistantRealtimeSession,
   AppNotification,
   AppRole,
   AuditPage,
@@ -13,7 +17,6 @@ import {
   Project,
   ProjectOverview,
   ReportData,
-  ReportExport,
   TenantSettings,
   ThemePreference,
   TicketActivity,
@@ -24,11 +27,9 @@ import {
   TicketType,
   Workflow,
   NotificationPreferences,
-  SavedView,
   CustomFieldDefinition,
   CustomRole,
   EmailOutboxPage,
-  ReportSchedule,
   RetentionSettings,
   SlaPolicy,
   TicketRelationship,
@@ -53,18 +54,6 @@ export class ApiClient {
 
   login(email: string, password: string) {
     return this.http.post<AuthenticatedSession>('/api/auth/login', { email, password });
-  }
-
-  register(request: {
-    companyName: string;
-    companyShortName: string;
-    displayName: string;
-    email: string;
-    password: string;
-    language: AppLanguage;
-    timeZone: string;
-  }) {
-    return this.http.post<AuthenticatedSession>('/api/auth/register-tenant', request);
   }
 
   logout() {
@@ -96,8 +85,7 @@ export class ApiClient {
 
   createProject(request: {
     key: string;
-    nameEnglish: string;
-    nameFrench: string;
+    name: string;
     description: string;
     workflowId: string | null;
     defaultPriority: TicketPriority;
@@ -109,8 +97,7 @@ export class ApiClient {
   updateProject(
     projectId: string,
     request: {
-      nameEnglish: string;
-      nameFrench: string;
+      name: string;
       description: string | null;
       defaultPriority: TicketPriority;
       defaultAssigneeUserId: string | null;
@@ -146,8 +133,7 @@ export class ApiClient {
     projectId: string | null;
     statuses: {
       key: string;
-      labelEnglish: string;
-      labelFrench: string;
+      label: string;
       category: string;
       order: number;
       color: string;
@@ -157,8 +143,7 @@ export class ApiClient {
     transitions: {
       fromKey: string;
       toKey: string;
-      nameEnglish: string | null;
-      nameFrench: string | null;
+      name: string | null;
       commentRequired: boolean;
     }[];
   }) {
@@ -173,8 +158,7 @@ export class ApiClient {
       isActive: boolean;
       statuses: {
         key: string;
-        labelEnglish: string;
-        labelFrench: string;
+        label: string;
         category: string;
         order: number;
         color: string;
@@ -184,8 +168,7 @@ export class ApiClient {
       transitions: {
         fromKey: string;
         toKey: string;
-        nameEnglish: string | null;
-        nameFrench: string | null;
+        name: string | null;
         commentRequired: boolean;
       }[];
       statusMappings: Record<string, string>;
@@ -372,52 +355,16 @@ export class ApiClient {
     return this.http.put<NotificationPreferences>('/api/notifications/preferences', preferences);
   }
 
-  savedViews() {
-    return this.http.get<SavedView[]>('/api/saved-views');
-  }
-  saveView(name: string, projectId: string | null, filters: object, isPublished = false) {
-    return this.http.post<SavedView>('/api/saved-views', {
-      name,
-      projectId,
-      filters,
-      sort: { field: 'updatedAt', direction: 'desc' },
-      columns: ['key', 'title', 'project', 'status', 'priority', 'assignee', 'updatedAt'],
-      groupBy: null,
-      isPublished,
-    });
-  }
-  deleteSavedView(viewId: string) {
-    return this.http.delete<void>(`/api/saved-views/${viewId}`);
-  }
-
   report(type: string, projectId?: string) {
     return this.http.get<ReportData>(`/api/reports/${type}`, {
       params: projectId ? { projectId } : {},
     });
   }
 
-  exportReport(reportType: string, language: AppLanguage, projectId?: string) {
-    return this.http.post<{ id: string }>('/api/reports/exports', {
-      reportType,
-      language,
-      filter: {
-        projectId: projectId ?? null,
-        from: null,
-        to: null,
-        priority: null,
-        type: null,
-        assigneeUserId: null,
-        includeArchived: false,
-      },
-    });
-  }
-
-  reportExports() {
-    return this.http.get<ReportExport[]>('/api/reports/exports');
-  }
-
-  downloadReport(exportId: string) {
-    return this.http.get(`/api/reports/exports/${exportId}/download`, { responseType: 'blob' });
+  reportPdf(reportType: string, language: AppLanguage, projectId?: string) {
+    let params = new HttpParams().set('language', language);
+    if (projectId) params = params.set('projectId', projectId);
+    return this.http.get(`/api/reports/${reportType}/pdf`, { params, responseType: 'blob' });
   }
 
   reportCsv(reportType: string, language: AppLanguage, projectId?: string) {
@@ -426,29 +373,6 @@ export class ApiClient {
     return this.http.get(`/api/reports/${reportType}/csv`, { params, responseType: 'blob' });
   }
 
-  reportSchedules() {
-    return this.http.get<ReportSchedule[]>('/api/reports/schedules');
-  }
-
-  createReportSchedule(request: {
-    projectId: string | null;
-    name: string;
-    reportType: string;
-    filter: object;
-    language: AppLanguage;
-    format: 'Pdf' | 'Csv';
-    frequency: 'Daily' | 'Weekly' | 'Monthly';
-    isActive: boolean;
-    nextRunAt: string;
-  }) {
-    return this.http.post<ReportSchedule>('/api/reports/schedules', request);
-  }
-
-  runReportSchedule(scheduleId: string) {
-    return this.http.post(`/api/reports/schedules/${scheduleId}/run`, null, {
-      responseType: 'blob',
-    });
-  }
 
   members() {
     return this.http.get<Member[]>('/api/members');
@@ -492,6 +416,39 @@ export class ApiClient {
     return this.http.patch('/api/profile/preferences', { language, theme });
   }
 
+  profile() {
+    return this.http.get<{ displayName: string; email: string; hasAvatar: boolean }>(
+      '/api/profile',
+    );
+  }
+
+  updateProfile(displayName: string) {
+    return this.http.patch<{ displayName: string; email: string; hasAvatar: boolean }>(
+      '/api/profile',
+      { displayName },
+    );
+  }
+
+  changePassword(currentPassword: string, newPassword: string) {
+    return this.http.post<void>('/api/auth/change-password', { currentPassword, newPassword });
+  }
+
+  avatar() {
+    return this.http.get('/api/profile/avatar', { responseType: 'blob' });
+  }
+
+  uploadAvatar(file: File) {
+    return this.http.post<{ displayName: string; email: string; hasAvatar: boolean }>(
+      '/api/profile/avatar',
+      file,
+      { headers: { 'Content-Type': file.type } },
+    );
+  }
+
+  deleteAvatar() {
+    return this.http.delete<void>('/api/profile/avatar');
+  }
+
   updateTenantSettings(request: {
     name: string;
     shortName: string;
@@ -515,16 +472,27 @@ export class ApiClient {
     return this.http.get(`/api/tenants/current/logos/${variant}`, { responseType: 'blob' });
   }
 
-  audit() {
-    return this.http.get<AuditPage>('/api/audit', { params: { pageSize: 100 } });
+  deleteLogo(variant: 'light' | 'dark') {
+    return this.http.delete<void>(`/api/tenants/current/logos/${variant}`);
   }
 
-  auditExport() {
-    return this.http.get<AuditPage['items']>('/api/audit/export');
+  audit(filters?: AuditFilters) {
+    return this.http.get<AuditPage>('/api/audit', {
+      params: { pageSize: 100, ...compactParams(filters) },
+    });
   }
 
-  auditCsv() {
-    return this.http.get('/api/audit/export.csv', { responseType: 'blob' });
+  auditExport(filters?: AuditFilters) {
+    return this.http.get<AuditPage['items']>('/api/audit/export', {
+      params: compactParams(filters),
+    });
+  }
+
+  auditCsv(filters?: AuditFilters) {
+    return this.http.get('/api/audit/export.csv', {
+      responseType: 'blob',
+      params: compactParams(filters),
+    });
   }
 
   ticketSchema(projectId?: string) {
@@ -535,6 +503,32 @@ export class ApiClient {
 
   createTicketType(request: Omit<TicketTypeDefinition, 'id'>) {
     return this.http.post<TicketTypeDefinition>('/api/configuration/ticket-schema/types', request);
+  }
+
+  updateTicketType(definitionId: string, request: Omit<TicketTypeDefinition, 'id'>) {
+    return this.http.put<TicketTypeDefinition>(
+      `/api/configuration/ticket-schema/types/${definitionId}`,
+      request,
+    );
+  }
+
+  deleteTicketType(definitionId: string) {
+    return this.http.delete<void>(`/api/configuration/ticket-schema/types/${definitionId}`);
+  }
+
+  updateTicketPriority(definitionId: string, request: Omit<TicketPriorityDefinition, 'id'>) {
+    return this.http.put<TicketPriorityDefinition>(
+      `/api/configuration/ticket-schema/priorities/${definitionId}`,
+      request,
+    );
+  }
+
+  deleteTicketPriority(definitionId: string) {
+    return this.http.delete<void>(`/api/configuration/ticket-schema/priorities/${definitionId}`);
+  }
+
+  workflowStatusUsage(workflowId: string) {
+    return this.http.get<Record<string, number>>(`/api/workflows/${workflowId}/status-usage`);
   }
 
   createTicketPriority(request: Omit<TicketPriorityDefinition, 'id'>) {
@@ -661,8 +655,7 @@ export class ApiClient {
   }
   updatePortalSettings(request: {
     isEnabled: boolean;
-    introductionEnglish: string;
-    introductionFrench: string;
+    introduction: string;
   }) {
     return this.http.put<void>('/api/portal/settings', request);
   }
@@ -721,29 +714,6 @@ export class ApiClient {
       null,
     );
   }
-  ssoConfiguration() {
-    return this.http.get<{
-      id: string | null;
-      authority: string;
-      clientId: string;
-      allowedEmailDomains: string[];
-      isEnabled: boolean;
-      requireSso: boolean;
-      hasClientSecret: boolean;
-    }>('/api/integrations/sso');
-  }
-  updateSso(request: object) {
-    return this.http.put<void>('/api/integrations/sso', request);
-  }
-  testSso() {
-    return this.http.post('/api/integrations/sso/test', null);
-  }
-  startSso(tenantId: string) {
-    return this.http.get<{ authorizationUrl: string }>(`/api/auth/sso/${tenantId}/start`);
-  }
-  exchangeSso(code: string) {
-    return this.http.post<AuthenticatedSession>('/api/auth/sso/exchange', { code });
-  }
   aiConfiguration() {
     return this.http.get<{
       isEnabled: boolean;
@@ -789,6 +759,28 @@ export class ApiClient {
     return this.http.post<void>(`/api/knowledge/${articleId}/tickets/${ticketId}`, null);
   }
 
+  assistantConversations() {
+    return this.http.get<AssistantConversationSummary[]>('/api/assistant/conversations');
+  }
+  createAssistantConversation() {
+    return this.http.post<AssistantConversationSummary>('/api/assistant/conversations', null);
+  }
+  assistantConversation(conversationId: string) {
+    return this.http.get<AssistantConversationDetail>(`/api/assistant/conversations/${conversationId}`);
+  }
+  deleteAssistantConversation(conversationId: string) {
+    return this.http.delete<void>(`/api/assistant/conversations/${conversationId}`);
+  }
+  saveAssistantTranscript(conversationId: string, role: 'user' | 'assistant', content: string) {
+    return this.http.post<AssistantMessage>(
+      `/api/assistant/conversations/${conversationId}/transcripts`,
+      { role, content },
+    );
+  }
+  assistantRealtimeSession() {
+    return this.http.post<AssistantRealtimeSession>('/api/assistant/realtime/session', null);
+  }
+
   aiAssistance(ticketId: string) {
     return this.http.get<AiAssistance[]>(`/api/tickets/${ticketId}/ai-assistance`);
   }
@@ -800,4 +792,18 @@ export class ApiClient {
       accept,
     });
   }
+}
+
+export interface AuditFilters {
+  action?: string;
+  targetType?: string;
+  actorUserId?: string;
+  from?: string;
+  to?: string;
+}
+
+function compactParams(filters?: AuditFilters): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(filters ?? {}).filter(([, value]) => Boolean(value)),
+  ) as Record<string, string>;
 }

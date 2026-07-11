@@ -26,6 +26,7 @@ import {
   AiAssistance,
   KnowledgeArticle,
 } from '../../core/api/api-models';
+import { RichHtmlPipe } from '../../core/content/rich-html.pipe';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
 import { SessionStore } from '../../core/session/session-store';
@@ -36,6 +37,7 @@ import { SessionStore } from '../../core/session/session-store';
     DecimalPipe,
     KeyValuePipe,
     LocalizedDatePipe,
+    RichHtmlPipe,
     FormsModule,
     ReactiveFormsModule,
     RouterLink,
@@ -169,7 +171,21 @@ export class TicketDetailPage {
   }
 
   statusLabel(status: WorkflowStatus): string {
-    return this.i18n.language() === 'French' ? status.labelFrench : status.labelEnglish;
+    return status.label;
+  }
+  statusPillClass(ticket: TicketDetail): string {
+    return { ToDo: 'pill-slate', InProgress: 'pill-blue', Done: 'pill-green' }[
+      ticket.statusCategory
+    ];
+  }
+  priorityPillClass(priority: TicketPriority): string {
+    return { Urgent: 'pill-red', High: 'pill-amber', Normal: 'pill-blue', Low: 'pill-slate' }[
+      priority
+    ];
+  }
+  initials(name: string): string {
+    const parts = name.trim().split(/\s+/);
+    return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '?';
   }
   displayScanStatus(status: TicketAttachment['scanStatus']): string {
     if (this.i18n.language() !== 'French') return status;

@@ -1,6 +1,5 @@
 <header class="page-heading">
   <div>
-    <p class="eyebrow">{{ text('SELF SERVICE', 'LIBRE-SERVICE') }}</p>
     <h1>{{ text('Knowledge base', 'Base de connaissances') }}</h1>
     <p>
       {{
@@ -11,136 +10,63 @@
       }}
     </p>
   </div>
+  @if (store.canManageProjects()) {
+    <a pButton routerLink="/app/knowledge/new">{{ text('New article', 'Nouvel article') }}</a>
+  }
 </header>
 @if (error()) {
   <p-message severity="error">{{ error() }}</p-message>
 }
-@if (success()) {
-  <p-message severity="success">{{ success() }}</p-message>
-}
-<div class="knowledge-layout">
-  <section class="content-panel">
-    <div class="toolbar">
+<section class="content-panel">
+  <div class="toolbar">
+    <div class="search-box">
+      <app-icon name="search" [size]="15" />
       <input
-        pInputText
         [(ngModel)]="search"
         [placeholder]="text('Search articles', 'Rechercher des articles')"
+        [attr.aria-label]="text('Search articles', 'Rechercher des articles')"
         (keyup.enter)="filter()"
-      /><p-select
-        [(ngModel)]="projectId"
-        [options]="projects()"
-        optionValue="id"
-        [optionLabel]="i18n.language() === 'French' ? 'nameFrench' : 'nameEnglish'"
-        [showClear]="true"
-        [placeholder]="text('All projects', 'Tous les projets')"
-        (onChange)="filter()"
-      /><button pButton type="button" (click)="filter()">{{ text('Search', 'Rechercher') }}</button>
+      />
     </div>
-    <div class="article-list">
-      @for (article of articles(); track article.id) {
-        <article [class.selected]="selected()?.id === article.id">
-          <div>
-            <p-tag
-              [value]="article.status"
-              [severity]="article.status === 'Published' ? 'success' : 'secondary'"
-            /><p-tag [value]="article.visibility" severity="contrast" />
-          </div>
-          <h2>{{ title(article) }}</h2>
+    <p-select
+      [(ngModel)]="projectId"
+      [options]="projects()"
+      optionValue="id"
+      [optionLabel]="'name'"
+      [showClear]="true"
+      [placeholder]="text('All projects', 'Tous les projets')"
+      (onChange)="filter()"
+    />
+    <button pButton type="button" size="small" severity="secondary" [outlined]="true" (click)="filter()">
+      {{ text('Search', 'Rechercher') }}
+    </button>
+  </div>
+  <div class="article-list">
+    @for (article of articles(); track article.id) {
+      <a class="article-row" [routerLink]="['/app/knowledge', article.id]">
+        <div class="article-copy">
+          <strong>{{ title(article) }}</strong>
           <small>/{{ article.slug }}</small>
-          <div class="actions">
-            <button
-              pButton
-              type="button"
-              size="small"
-              severity="secondary"
-              [outlined]="true"
-              (click)="edit(article)"
-            >
-              {{ text('Edit', 'Modifier') }}
-            </button>
-            @if (article.status !== 'Published') {
-              <button pButton type="button" size="small" (click)="status(article, 'Published')">
-                {{ text('Publish', 'Publier') }}
-              </button>
-            }
-            @if (article.status === 'Published') {
-              <button
-                pButton
-                type="button"
-                size="small"
-                severity="secondary"
-                (click)="status(article, 'Archived')"
-              >
-                {{ text('Archive', 'Archiver') }}
-              </button>
-            }
-          </div>
-        </article>
-      } @empty {
-        <p>{{ text('No articles yet.', 'Aucun article pour le moment.') }}</p>
-      }
-    </div>
-  </section>
-  @if (store.canManageProjects()) {
-    <section class="content-panel editor">
-      <div class="section-heading">
-        <h2>
-          {{
-            selected()
-              ? text('Edit article', "Modifier l'article")
-              : text('New article', 'Nouvel article')
-          }}
-        </h2>
-        @if (selected()) {
-          <button pButton type="button" [text]="true" (click)="clear()">
-            {{ text('New', 'Nouveau') }}
-          </button>
-        }
-      </div>
-      <form (ngSubmit)="save()">
-        <label for="knowledgeProject">{{ text('Project (optional)', 'Projet (facultatif)') }}</label
-        ><p-select
-          inputId="knowledgeProject"
-          [(ngModel)]="projectId"
-          name="project"
-          [options]="projects()"
-          optionValue="id"
-          [optionLabel]="i18n.language() === 'French' ? 'nameFrench' : 'nameEnglish'"
-          [showClear]="true"
-        /><label>Slug<input pInputText [(ngModel)]="slug" name="slug" required /></label>
-        <div class="split">
-          <label
-            >English title<input
-              pInputText
-              [(ngModel)]="titleEnglish"
-              name="titleEn"
-              required /></label
-          ><label
-            >Titre français<input pInputText [(ngModel)]="titleFrench" name="titleFr" required
-          /></label>
         </div>
-        <span class="field-label">English content</span
-        ><p-editor
-          ariaLabel="English content"
-          [(ngModel)]="bodyEnglish"
-          name="bodyEn"
-          [style]="{ height: '12rem' }"
-        /><span class="field-label">Contenu français</span
-        ><p-editor
-          ariaLabel="Contenu français"
-          [(ngModel)]="bodyFrench"
-          name="bodyFr"
-          [style]="{ height: '12rem' }"
-        /><label for="knowledgeVisibility">{{ text('Visibility', 'Visibilité') }}</label
-        ><p-select
-          inputId="knowledgeVisibility"
-          [(ngModel)]="visibility"
-          name="visibility"
-          [options]="visibilities"
-        /><button pButton type="submit" [loading]="busy()">
-          {{ text('Save draft', 'Enregistrer le brouillon') }}
-        </button>
-      </form>
-    </section>
-  }
-</div>
+        <span
+          class="pill"
+          [class]="
+            article.status === 'Published'
+              ? 'pill-green'
+              : article.status === 'Archived'
+                ? 'pill-slate'
+                : 'pill-amber'
+          "
+          >{{ article.status }}</span
+        >
+        <span class="pill pill-violet">{{ article.visibility }}</span>
+        <time>{{ article.updatedAt | localizedDate: 'mediumDate' }}</time>
+      </a>
+    } @empty {
+      <div class="empty-state">
+        <app-icon name="knowledge" [size]="26" />
+        <span>{{ text('No articles yet.', 'Aucun article pour le moment.') }}</span>
+      </div>
+    }
+  </div>
+</section>

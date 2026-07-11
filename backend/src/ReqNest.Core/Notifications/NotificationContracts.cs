@@ -8,8 +8,7 @@ public sealed record NotificationMessage(
     Guid? ProjectId,
     Guid? TicketId,
     string EventKey,
-    string SummaryEnglish,
-    string SummaryFrench,
+    string Summary,
     string DeepLink,
     string? GroupKey = null,
     bool NotifyActor = false);

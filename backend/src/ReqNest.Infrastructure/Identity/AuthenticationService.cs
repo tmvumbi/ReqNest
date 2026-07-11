@@ -490,8 +490,7 @@ public sealed class AuthenticationService(
             WorkflowId = workflow.Id,
             Workflow = workflow,
             Key = "TODO",
-            LabelEnglish = "TODO",
-            LabelFrench = "À FAIRE",
+            Label = "TODO",
             Category = WorkflowStatusCategory.ToDo,
             Order = 1,
             Color = "#64748b",
@@ -503,8 +502,7 @@ public sealed class AuthenticationService(
             WorkflowId = workflow.Id,
             Workflow = workflow,
             Key = "IN_PROGRESS",
-            LabelEnglish = "IN PROGRESS",
-            LabelFrench = "EN COURS",
+            Label = "IN PROGRESS",
             Category = WorkflowStatusCategory.InProgress,
             Order = 2,
             Color = "#2563eb",
@@ -515,8 +513,7 @@ public sealed class AuthenticationService(
             WorkflowId = workflow.Id,
             Workflow = workflow,
             Key = "DONE",
-            LabelEnglish = "DONE",
-            LabelFrench = "TERMINÉ",
+            Label = "DONE",
             Category = WorkflowStatusCategory.Done,
             Order = 3,
             Color = "#16a34a",
@@ -537,18 +534,18 @@ public sealed class AuthenticationService(
 
     private static IReadOnlyCollection<TicketTypeDefinition> CreateDefaultTypes(Guid tenantId) =>
     [
-        new() { TenantId = tenantId, Key = "Incident", LabelEnglish = "Incident", LabelFrench = "Incident", Order = 1 },
-        new() { TenantId = tenantId, Key = "ServiceRequest", LabelEnglish = "Service request", LabelFrench = "Demande de service", Order = 2 },
-        new() { TenantId = tenantId, Key = "Task", LabelEnglish = "Task", LabelFrench = "Tâche", Order = 3 },
-        new() { TenantId = tenantId, Key = "Problem", LabelEnglish = "Problem", LabelFrench = "Problème", Order = 4 },
+        new() { TenantId = tenantId, Key = "Incident", Label = "Incident", Order = 1 },
+        new() { TenantId = tenantId, Key = "ServiceRequest", Label = "Service request", Order = 2 },
+        new() { TenantId = tenantId, Key = "Task", Label = "Task", Order = 3 },
+        new() { TenantId = tenantId, Key = "Problem", Label = "Problem", Order = 4 },
     ];
 
     private static IReadOnlyCollection<TicketPriorityDefinition> CreateDefaultPriorities(Guid tenantId) =>
     [
-        new() { TenantId = tenantId, Key = "Low", LabelEnglish = "Low", LabelFrench = "Faible", Color = "#64748b", Weight = 1, Order = 1 },
-        new() { TenantId = tenantId, Key = "Normal", LabelEnglish = "Normal", LabelFrench = "Normale", Color = "#2563eb", Weight = 2, Order = 2 },
-        new() { TenantId = tenantId, Key = "High", LabelEnglish = "High", LabelFrench = "Élevée", Color = "#d97706", Weight = 3, Order = 3 },
-        new() { TenantId = tenantId, Key = "Urgent", LabelEnglish = "Urgent", LabelFrench = "Urgente", Color = "#dc2626", Weight = 4, Order = 4 },
+        new() { TenantId = tenantId, Key = "Low", Label = "Low", Color = "#64748b", Weight = 1, Order = 1 },
+        new() { TenantId = tenantId, Key = "Normal", Label = "Normal", Color = "#2563eb", Weight = 2, Order = 2 },
+        new() { TenantId = tenantId, Key = "High", Label = "High", Color = "#d97706", Weight = 3, Order = 3 },
+        new() { TenantId = tenantId, Key = "Urgent", Label = "Urgent", Color = "#dc2626", Weight = 4, Order = 4 },
     ];
 
     private static SlaPolicy CreateDefaultSlaPolicy(Guid tenantId, string timeZone)

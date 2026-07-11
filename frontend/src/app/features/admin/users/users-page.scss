@@ -1,13 +1,16 @@
 .invite-form,
 .field {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.35rem;
 }
 .invite-form {
-  gap: 1rem;
+  gap: 0.9rem;
 }
 label {
-  font-weight: 700;
+  color: var(--app-text-muted);
+  font-size: 0.76rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
 }
 input,
 p-select,
@@ -18,11 +21,42 @@ p-multiselect {
   display: flex;
   gap: 0.65rem;
   align-items: center;
+  font-size: 0.85rem;
+  color: var(--app-text);
+}
+.member-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.member-cell div {
+  display: grid;
+  min-width: 0;
+}
+.member-cell small {
+  color: var(--app-text-muted);
+  font-size: 0.76rem;
+}
+.member-avatar {
+  display: grid;
+  width: 1.9rem;
+  height: 1.9rem;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--p-primary-color) 14%, transparent);
+  color: var(--p-primary-color);
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+.muted-cell {
+  color: var(--app-text-muted);
 }
 .row-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 0.3rem;
+  justify-content: flex-end;
 }
 .dialog-actions {
   display: flex;
@@ -32,8 +66,18 @@ p-multiselect {
 .development-token {
   display: grid;
   gap: 0.5rem;
+  margin-bottom: 0.85rem;
   padding: 0.75rem;
+  border: 1px solid var(--app-border);
   border-radius: 0.5rem;
-  background: var(--app-background);
+  background: var(--app-sunken);
   overflow-wrap: anywhere;
+  font-size: 0.82rem;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
 }
