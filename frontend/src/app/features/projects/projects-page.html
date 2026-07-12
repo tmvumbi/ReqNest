@@ -28,9 +28,15 @@
     <ng-template #body let-project
       ><tr>
         <td>
-          <strong>{{ project.key }}</strong>
+          <a [routerLink]="['/app/projects', project.id]" class="project-link"
+            ><strong>{{ project.key }}</strong></a
+          >
         </td>
-        <td>{{ name(project) }}</td>
+        <td>
+          <a [routerLink]="['/app/projects', project.id]" class="project-link">{{
+            name(project)
+          }}</a>
+        </td>
         <td>{{ workflowName(project.workflowId) }}</td>
         <td>{{ i18n.ticketPriority(project.defaultPriority) }}</td>
         <td>
@@ -40,15 +46,14 @@
         </td>
         <td>
           <div class="row-actions">
-            <button
+            <a
               pButton
-              type="button"
               [text]="true"
               severity="secondary"
-              (click)="showOverview(project)"
+              [routerLink]="['/app/projects', project.id]"
             >
               {{ i18n.language() === 'French' ? 'Aperçu' : 'Overview' }}
-            </button>
+            </a>
             @if (store.canManageProjects()) {
               <button
                 pButton
@@ -154,45 +159,4 @@
       </button>
     </div>
   </form>
-</p-dialog>
-<p-dialog
-  [header]="i18n.language() === 'French' ? 'Aperçu du projet' : 'Project overview'"
-  [visible]="overviewVisible()"
-  (visibleChange)="overviewVisible.set($event)"
-  [modal]="true"
-  [style]="{ width: 'min(42rem, 94vw)' }"
->
-  @if (overview(); as data) {
-    <div class="overview-metrics">
-      <article>
-        <strong>{{ data.unassigned }}</strong
-        ><span>{{ i18n.text('tickets.unassigned') }}</span>
-      </article>
-      <article [class.alarming]="data.overdue > 0">
-        <strong>{{ data.overdue }}</strong
-        ><span>{{ i18n.text('tickets.overdue') }}</span>
-      </article>
-    </div>
-    <h3>{{ i18n.text('common.status') }}</h3>
-    <ul class="overview-list">
-      @for (status of data.byStatus; track status.statusId) {
-        <li>
-          <span>{{ status.label }}</span>
-          <strong>{{ status.count }}</strong>
-        </li>
-      }
-    </ul>
-    <h3>{{ i18n.language() === 'French' ? 'Tickets récents' : 'Recent tickets' }}</h3>
-    <ul class="overview-list">
-      @for (ticket of data.recentlyUpdated; track ticket.id) {
-        <li>
-          <a [routerLink]="['/app/tickets', ticket.id]" (click)="overviewVisible.set(false)"
-            ><span class="recent-key">{{ ticket.key }}</span> {{ ticket.title }}</a
-          >
-        </li>
-      } @empty {
-        <li class="state-message">{{ i18n.text('common.empty') }}</li>
-      }
-    </ul>
-  }
 </p-dialog>

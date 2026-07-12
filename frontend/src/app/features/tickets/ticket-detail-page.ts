@@ -1,14 +1,13 @@
 import { DecimalPipe, KeyValuePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
-import { DialogModule } from 'primeng/dialog';
 import { EditorInitEvent, EditorModule } from 'primeng/editor';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
-import { MultiSelectModule } from 'primeng/multiselect';
 import { SelectModule } from 'primeng/select';
 import { TagModule } from 'primeng/tag';
 import { ApiClient } from '../../core/api/api-client';
@@ -20,12 +19,12 @@ import {
   TicketDetail,
   TicketPriority,
   TicketRelationship,
-  TicketType,
   Workflow,
   WorkflowStatus,
   AiAssistance,
   KnowledgeArticle,
 } from '../../core/api/api-models';
+import { MentionAutocomplete } from '../../core/content/mention-autocomplete';
 import { RichHtmlPipe } from '../../core/content/rich-html.pipe';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { LocalizedDatePipe } from '../../core/i18n/localized-date.pipe';
@@ -37,16 +36,15 @@ import { SessionStore } from '../../core/session/session-store';
     DecimalPipe,
     KeyValuePipe,
     LocalizedDatePipe,
+    MentionAutocomplete,
     RichHtmlPipe,
     FormsModule,
     ReactiveFormsModule,
     RouterLink,
     ButtonModule,
-    DialogModule,
     EditorModule,
     InputTextModule,
     MessageModule,
-    MultiSelectModule,
     SelectModule,
     TagModule,
   ],
@@ -57,7 +55,7 @@ import { SessionStore } from '../../core/session/session-store';
 export class TicketDetailPage {
   private readonly api = inject(ApiClient);
   private readonly formBuilder = inject(FormBuilder);
-  private readonly ticketId = inject(ActivatedRoute).snapshot.paramMap.get('ticketId')!;
+  private ticketId!: string;
   readonly i18n = inject(I18nService);
   readonly store = inject(SessionStore);
   readonly ticket = signal<TicketDetail | null>(null);
@@ -69,10 +67,9 @@ export class TicketDetailPage {
   readonly aiDrafts = signal<AiAssistance[]>([]);
   readonly knowledge = signal<KnowledgeArticle[]>([]);
   readonly members = signal<Member[]>([]);
-  readonly editVisible = signal(false);
-  readonly saving = signal(false);
   readonly loading = signal(true);
   readonly submittingComment = signal(false);
+  readonly showCommentForm = signal(false);
   readonly uploading = signal(false);
   readonly error = signal(false);
   relationshipTargetId = '';
@@ -83,17 +80,6 @@ export class TicketDetailPage {
   readonly relationshipTypes: TicketRelationship['type'][] = ['RelatesTo', 'Duplicates', 'Blocks'];
   readonly commentForm = this.formBuilder.nonNullable.group({
     body: ['', Validators.required],
-    mentionUserIds: [[] as string[]],
-  });
-  readonly editForm = this.formBuilder.nonNullable.group({
-    title: ['', [Validators.required, Validators.maxLength(240)]],
-    description: ['', Validators.required],
-    type: ['Incident' as TicketType, Validators.required],
-    priority: ['Normal' as TicketPriority, Validators.required],
-    assigneeUserId: [''],
-    labels: [''],
-    dueAt: [''],
-    resolutionSummary: [''],
   });
   readonly editorFormats = [
     'header',
@@ -105,11 +91,16 @@ export class TicketDetailPage {
     'code-block',
     'link',
   ];
-  readonly types: TicketType[] = ['Incident', 'ServiceRequest', 'Task', 'Problem'];
-  readonly priorities: TicketPriority[] = ['Low', 'Normal', 'High', 'Urgent'];
 
   constructor() {
-    void this.load();
+    // Re-run on param changes: the router reuses this component when
+    // navigating between tickets (e.g. related-ticket or assistant links).
+    inject(ActivatedRoute)
+      .paramMap.pipe(takeUntilDestroyed())
+      .subscribe((params) => {
+        this.ticketId = params.get('ticketId')!;
+        void this.load();
+      });
   }
 
   allowedStatuses(): WorkflowStatus[] {
@@ -141,17 +132,19 @@ export class TicketDetailPage {
     this.submittingComment.set(true);
     try {
       await firstValueFrom(
-        this.api.addComment(
-          this.ticketId,
-          this.commentForm.controls.body.value,
-          this.commentForm.controls.mentionUserIds.value,
-        ),
+        this.api.addComment(this.ticketId, this.commentForm.controls.body.value),
       );
-      this.commentForm.reset({ body: '', mentionUserIds: [] });
+      this.commentForm.reset({ body: '' });
+      this.showCommentForm.set(false);
       await Promise.all([this.refreshComments(), this.refreshActivity()]);
     } finally {
       this.submittingComment.set(false);
     }
+  }
+
+  cancelComment(): void {
+    this.commentForm.reset({ body: '' });
+    this.showCommentForm.set(false);
   }
 
   async upload(event: Event): Promise<void> {
@@ -208,59 +201,6 @@ export class TicketDetailPage {
 
   labelEditor(event: Event, labelId: string): void {
     (event as unknown as EditorInitEvent).editor.root.setAttribute('aria-labelledby', labelId);
-  }
-
-  openEdit(): void {
-    const ticket = this.ticket();
-    if (!ticket) return;
-    this.editForm.reset({
-      title: ticket.title,
-      description: ticket.description,
-      type: ticket.type,
-      priority: ticket.priority,
-      assigneeUserId: ticket.assigneeUserId ?? '',
-      labels: ticket.labels.join(', '),
-      dueAt: ticket.dueAt ? ticket.dueAt.slice(0, 16) : '',
-      resolutionSummary: ticket.resolutionSummary ?? '',
-    });
-    this.editVisible.set(true);
-  }
-
-  async saveEdit(): Promise<void> {
-    const ticket = this.ticket();
-    this.editForm.markAllAsTouched();
-    if (!ticket || this.editForm.invalid || this.saving()) return;
-    const value = this.editForm.getRawValue();
-    this.saving.set(true);
-    this.error.set(false);
-    try {
-      this.ticket.set(
-        await firstValueFrom(
-          this.api.updateTicket(ticket, {
-            title: value.title,
-            description: value.description,
-            type: value.type,
-            priority: value.priority,
-            assigneeUserId: value.assigneeUserId || null,
-            labels: value.labels
-              .split(',')
-              .map((label) => label.trim())
-              .filter(Boolean),
-            dueAt: value.dueAt ? new Date(value.dueAt).toISOString() : null,
-            resolutionSummary: value.resolutionSummary || null,
-            typeKey: ticket.typeKey,
-            priorityKey: ticket.priorityKey,
-            customFields: ticket.customFields,
-          }),
-        ),
-      );
-      this.editVisible.set(false);
-      await this.refreshActivity();
-    } catch {
-      this.error.set(true);
-    } finally {
-      this.saving.set(false);
-    }
   }
 
   async setArchived(archived: boolean): Promise<void> {
@@ -364,6 +304,8 @@ export class TicketDetailPage {
   }
 
   private async load(): Promise<void> {
+    this.loading.set(true);
+    this.error.set(false);
     try {
       const [
         ticket,

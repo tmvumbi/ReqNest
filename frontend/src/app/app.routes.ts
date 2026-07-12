@@ -88,6 +88,12 @@ export const routes: Routes = [
           import('./features/tickets/ticket-detail-page').then((module) => module.TicketDetailPage),
       },
       {
+        path: 'tickets/:ticketId/edit',
+        canActivate: [ticketMaintainerGuard],
+        loadComponent: () =>
+          import('./features/tickets/ticket-edit-page').then((module) => module.TicketEditPage),
+      },
+      {
         path: 'profile',
         loadComponent: () =>
           import('./features/profile/profile-page').then((module) => module.ProfilePage),
@@ -96,6 +102,13 @@ export const routes: Routes = [
         path: 'projects',
         loadComponent: () =>
           import('./features/projects/projects-page').then((module) => module.ProjectsPage),
+      },
+      {
+        path: 'projects/:projectId',
+        loadComponent: () =>
+          import('./features/projects/project-detail-page').then(
+            (module) => module.ProjectDetailPage,
+          ),
       },
       {
         path: 'reports',

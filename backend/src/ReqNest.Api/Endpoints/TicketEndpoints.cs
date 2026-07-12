@@ -200,6 +200,14 @@ public static class TicketEndpoints
             return ApiProblems.Validation(httpContext, "A ticket description is required.");
         }
 
+        foreach (var mentionUserId in content.MentionUserIds)
+        {
+            if (!await CanUseProjectAsync(authorizationService, mentionUserId, authorization.TenantId, request.ProjectId, cancellationToken))
+            {
+                return ApiProblems.Validation(httpContext, "A mentioned user cannot access this ticket.", "invalid_mention");
+            }
+        }
+
         if (request.AssigneeUserId is not null &&
             !await CanUseProjectAsync(authorizationService, request.AssigneeUserId.Value, authorization.TenantId, request.ProjectId, cancellationToken))
         {
@@ -340,6 +348,21 @@ public static class TicketEndpoints
                 ticket.Id.ToString()), cancellationToken);
         }
 
+        if (content.MentionUserIds.Count > 0)
+        {
+            await notificationService.AddAsync(new NotificationMessage(
+                authorization.TenantId,
+                content.MentionUserIds,
+                actorUserId,
+                NotificationType.UserMentioned,
+                project.Id,
+                ticket.Id,
+                $"{audit.Id}:mention",
+                $"You were mentioned on {ticket.Key}.",
+                $"/app/tickets/{ticket.Id}",
+                ticket.Id.ToString()), cancellationToken);
+        }
+
         await dbContext.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return TypedResults.Created($"/api/tickets/{ticket.Id}", await LoadDetailAsync(dbContext, ticket.Id, cancellationToken));
@@ -425,6 +448,16 @@ public static class TicketEndpoints
         }
 
         var content = contentSanitizer.Sanitize(request.Description);
+        var previousMentions = contentSanitizer.Sanitize(ticket.Description).MentionUserIds;
+        var addedMentions = content.MentionUserIds.Except(previousMentions).ToArray();
+        foreach (var mentionUserId in addedMentions)
+        {
+            if (!await CanUseProjectAsync(authorizationService, mentionUserId, authorization.TenantId, ticket.ProjectId, cancellationToken))
+            {
+                return ApiProblems.Validation(httpContext, "A mentioned user cannot access this ticket.", "invalid_mention");
+            }
+        }
+
         var typeKey = string.IsNullOrWhiteSpace(request.TypeKey) ? request.Type.ToString() : request.TypeKey.Trim();
         var priorityKey = string.IsNullOrWhiteSpace(request.PriorityKey)
             ? request.Priority.ToString()
@@ -539,6 +572,21 @@ public static class TicketEndpoints
                 ticket.Id,
                 $"{audit.Id}:priority",
                 $"{ticket.Key} priority changed to {ticket.Priority}.",
+                $"/app/tickets/{ticket.Id}",
+                ticket.Id.ToString()), cancellationToken);
+        }
+
+        if (addedMentions.Length > 0)
+        {
+            await notificationService.AddAsync(new NotificationMessage(
+                ticket.TenantId,
+                addedMentions,
+                actorUserId,
+                NotificationType.UserMentioned,
+                ticket.ProjectId,
+                ticket.Id,
+                $"{audit.Id}:mention",
+                $"You were mentioned on {ticket.Key}.",
                 $"/app/tickets/{ticket.Id}",
                 ticket.Id.ToString()), cancellationToken);
         }

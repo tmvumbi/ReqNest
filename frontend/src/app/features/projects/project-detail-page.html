@@ -1,0 +1,98 @@
+@if (loading()) {
+  <p class="state-message">{{ i18n.text('common.loading') }}</p>
+}
+@if (error()) {
+  <p-message severity="error" role="alert">{{ i18n.text('common.error') }}</p-message>
+}
+@if (project(); as item) {
+  <a routerLink="/app/projects" class="back-link">← {{ i18n.text('projects.title') }}</a>
+  <header class="detail-header content-panel">
+    <div>
+      <div class="title-row">
+        <span class="project-key">{{ item.key }}</span>
+        <h1>{{ item.name }}</h1>
+      </div>
+      <div class="project-meta">
+        <span class="pill" [class]="item.isArchived ? 'pill-slate' : 'pill-green'">{{
+          item.isArchived ? i18n.text('projects.archived') : i18n.text('projects.active')
+        }}</span>
+      </div>
+      @if (item.description) {
+        <p class="project-description">{{ item.description }}</p>
+      }
+    </div>
+  </header>
+  <div class="detail-grid">
+    <div class="main-column">
+      @if (overview(); as data) {
+        <section class="content-panel">
+          <div class="overview-metrics">
+            <article>
+              <strong>{{ data.unassigned }}</strong
+              ><span>{{ i18n.text('tickets.unassigned') }}</span>
+            </article>
+            <article [class.alarming]="data.overdue > 0">
+              <strong>{{ data.overdue }}</strong
+              ><span>{{ i18n.text('tickets.overdue') }}</span>
+            </article>
+          </div>
+          <h3>{{ i18n.text('common.status') }}</h3>
+          <ul class="overview-list">
+            @for (status of data.byStatus; track status.statusId) {
+              <li>
+                <span>{{ status.label }}</span>
+                <strong>{{ status.count }}</strong>
+              </li>
+            } @empty {
+              <li class="state-message">{{ i18n.text('common.empty') }}</li>
+            }
+          </ul>
+        </section>
+        <section class="content-panel">
+          <h3>{{ i18n.language() === 'French' ? 'Tickets récents' : 'Recent tickets' }}</h3>
+          <ul class="overview-list">
+            @for (ticket of data.recentlyUpdated; track ticket.id) {
+              <li>
+                <a [routerLink]="['/app/tickets', ticket.id]"
+                  ><span class="recent-key">{{ ticket.key }}</span> {{ ticket.title }}</a
+                >
+                <time>{{ ticket.updatedAt | localizedDate: 'short' }}</time>
+              </li>
+            } @empty {
+              <li class="state-message">{{ i18n.text('common.empty') }}</li>
+            }
+          </ul>
+        </section>
+      }
+    </div>
+    <aside class="side-column">
+      <section class="content-panel">
+        <h2>{{ i18n.text('common.project') }}</h2>
+        <dl>
+          <div>
+            <dt>{{ i18n.text('projects.key') }}</dt>
+            <dd>{{ item.key }}</dd>
+          </div>
+          <div>
+            <dt>{{ i18n.text('projects.workflow') }}</dt>
+            <dd>{{ workflowName(item.workflowId) }}</dd>
+          </div>
+          <div>
+            <dt>{{ i18n.text('common.priority') }}</dt>
+            <dd>{{ i18n.ticketPriority(item.defaultPriority) }}</dd>
+          </div>
+          <div>
+            <dt>
+              {{ i18n.language() === 'French' ? 'Responsable par défaut' : 'Default assignee' }}
+            </dt>
+            <dd>{{ memberName(item.defaultAssigneeUserId) }}</dd>
+          </div>
+          <div>
+            <dt>{{ i18n.text('common.updated') }}</dt>
+            <dd>{{ item.updatedAt | localizedDate: 'medium' }}</dd>
+          </div>
+        </dl>
+      </section>
+    </aside>
+  </div>
+}

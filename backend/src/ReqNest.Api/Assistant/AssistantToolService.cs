@@ -108,7 +108,7 @@ public sealed class AssistantToolService(IHttpClientFactory httpClientFactory)
                 ["name"] = project?["name"]?.DeepClone(),
                 ["description"] = project?["description"]?.DeepClone(),
                 ["isArchived"] = project?["isArchived"]?.DeepClone(),
-                ["appUrl"] = "/app/projects",
+                ["appUrl"] = $"/app/projects/{project?["id"]?.GetValue<string>()}",
             });
         }
 

@@ -24,7 +24,13 @@ public sealed class RichContentSanitizer : IRichContentSanitizer
             ' ',
             (document.Body?.TextContent ?? string.Empty)
                 .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
-        return new SanitizedContent(html, plainText);
+        var mentionUserIds = document
+            .QuerySelectorAll("a.mention[data-user-id]")
+            .Select(anchor => Guid.TryParse(anchor.GetAttribute("data-user-id"), out var userId) ? userId : Guid.Empty)
+            .Where(userId => userId != Guid.Empty)
+            .Distinct()
+            .ToArray();
+        return new SanitizedContent(html, plainText, mentionUserIds);
     }
 
     private static HtmlSanitizer CreateSanitizer()
@@ -46,6 +52,7 @@ public sealed class RichContentSanitizer : IRichContentSanitizer
         sanitizer.AllowedAttributes.Add("class");
         sanitizer.AllowedAttributes.Add("style");
         sanitizer.AllowedAttributes.Add("data-list");
+        sanitizer.AllowedAttributes.Add("data-user-id");
         sanitizer.AllowedCssProperties.Clear();
         sanitizer.AllowedCssProperties.Add("color");
         sanitizer.AllowedCssProperties.Add("background-color");

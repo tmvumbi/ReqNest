@@ -9,13 +9,7 @@ import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
 import { TextareaModule } from 'primeng/textarea';
 import { ApiClient } from '../../core/api/api-client';
-import {
-  Member,
-  Project,
-  ProjectOverview,
-  TicketPriority,
-  Workflow,
-} from '../../core/api/api-models';
+import { Member, Project, TicketPriority, Workflow } from '../../core/api/api-models';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { SessionStore } from '../../core/session/session-store';
 
@@ -44,8 +38,6 @@ export class ProjectsPage {
   readonly workflows = signal<Workflow[]>([]);
   readonly members = signal<Member[]>([]);
   readonly editing = signal<Project | null>(null);
-  readonly overview = signal<ProjectOverview | null>(null);
-  readonly overviewVisible = signal(false);
   readonly loading = signal(true);
   readonly dialogVisible = signal(false);
   readonly submitting = signal(false);
@@ -123,10 +115,6 @@ export class ProjectsPage {
     }
   }
 
-  async showOverview(project: Project): Promise<void> {
-    this.overview.set(await firstValueFrom(this.api.projectOverview(project.id)));
-    this.overviewVisible.set(true);
-  }
   eligibleMembers(project?: Project | null): Member[] {
     return this.members().filter(
       (member) =>

@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
@@ -146,7 +147,9 @@ export class KnowledgeDetailPage {
   readonly busy = signal(false);
 
   constructor() {
-    void this.load();
+    // Re-run on param changes: the router reuses this component when
+    // navigating between articles (e.g. assistant links).
+    this.route.paramMap.pipe(takeUntilDestroyed()).subscribe(() => void this.load());
   }
 
   text(en: string, fr: string): string {
@@ -177,6 +180,7 @@ export class KnowledgeDetailPage {
 
   private async load(): Promise<void> {
     const id = this.route.snapshot.paramMap.get('articleId');
+    this.error.set('');
     try {
       const [articles, projects] = await Promise.all([
         firstValueFrom(this.api.knowledge()),

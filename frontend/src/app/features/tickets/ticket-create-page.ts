@@ -11,12 +11,14 @@ import { SelectModule } from 'primeng/select';
 import { ApiClient } from '../../core/api/api-client';
 import {
   CustomFieldDefinition,
+  Member,
   Project,
   TicketPriority,
   TicketSchema,
   TicketType,
   TicketTypeDefinition,
 } from '../../core/api/api-models';
+import { MentionAutocomplete } from '../../core/content/mention-autocomplete';
 import { I18nService } from '../../core/i18n/i18n.service';
 
 @Component({
@@ -29,6 +31,7 @@ import { I18nService } from '../../core/i18n/i18n.service';
     DatePickerModule,
     EditorModule,
     InputTextModule,
+    MentionAutocomplete,
     SelectModule,
   ],
   templateUrl: './ticket-create-page.html',
@@ -41,6 +44,7 @@ export class TicketCreatePage {
   private readonly formBuilder = inject(FormBuilder);
   readonly i18n = inject(I18nService);
   readonly projects = signal<Project[]>([]);
+  readonly members = signal<Member[]>([]);
   readonly schema = signal<TicketSchema | null>(null);
   readonly submitting = signal(false);
   readonly customFields: Record<string, unknown> = {};
@@ -76,6 +80,18 @@ export class TicketCreatePage {
         void this.loadSchema(active[0].id);
       }
     });
+    void firstValueFrom(this.api.members())
+      .then((members) => this.members.set(members))
+      .catch(() => this.members.set([]));
+  }
+
+  eligibleMembers(projectId: string): Member[] {
+    if (!projectId) return [];
+    return this.members().filter(
+      (member) =>
+        member.status === 'Active' &&
+        member.grants.some((grant) => grant.allProjects || grant.projectIds.includes(projectId)),
+    );
   }
 
   async loadSchema(projectId: string): Promise<void> {

@@ -379,6 +379,21 @@ p-password,
 .rich-content a {
   color: var(--p-primary-color);
 }
+.mention-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.78rem;
+  color: var(--app-text-muted);
+}
+.rich-content a.mention,
+.ql-editor a.mention {
+  padding: 0.08em 0.32em;
+  border-radius: 0.45em;
+  background: color-mix(in srgb, var(--p-primary-color) 12%, transparent);
+  color: var(--p-primary-color);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: default;
+}
 .rich-content pre {
   overflow-x: auto;
   padding: 0.8rem;

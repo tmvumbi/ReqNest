@@ -104,7 +104,8 @@ public static class CollaborationEndpoints
             return ApiProblems.Validation(httpContext, "A comment is required.");
         }
 
-        foreach (var userId in request.MentionUserIds.Distinct())
+        var mentionUserIds = (request.MentionUserIds ?? []).Concat(content.MentionUserIds).Distinct().ToArray();
+        foreach (var userId in mentionUserIds)
         {
             if (!await TicketEndpoints.CanUseProjectAsync(
                     authorizationService,
@@ -141,7 +142,7 @@ public static class CollaborationEndpoints
             commentId = comment.Id,
         }, cancellationToken);
         var regularRecipients = await TicketEndpoints.NotificationRecipientsAsync(dbContext, access.Ticket, cancellationToken);
-        var mentionRecipients = request.MentionUserIds.Distinct().ToArray();
+        var mentionRecipients = mentionUserIds;
         await notificationService.AddAsync(new NotificationMessage(
             access.Ticket.TenantId,
             regularRecipients.Except(mentionRecipients).ToArray(),
@@ -175,6 +176,8 @@ public static class CollaborationEndpoints
         HttpContext httpContext,
         ReqNestDbContext dbContext,
         IRichContentSanitizer contentSanitizer,
+        ITenantAuthorizationService authorizationService,
+        INotificationService notificationService,
         CancellationToken cancellationToken)
     {
         var access = await GetTicketAccessAsync(ticketId, httpContext, dbContext, cancellationToken);
@@ -204,6 +207,21 @@ public static class CollaborationEndpoints
             return ApiProblems.Validation(httpContext, "A comment is required.");
         }
 
+        var previousMentions = contentSanitizer.Sanitize(comment.Body).MentionUserIds;
+        var addedMentions = new List<Guid>();
+        foreach (var mentionUserId in content.MentionUserIds.Except(previousMentions))
+        {
+            if (await TicketEndpoints.CanUseProjectAsync(
+                    authorizationService,
+                    mentionUserId,
+                    access.Authorization!.TenantId,
+                    access.Ticket.ProjectId,
+                    cancellationToken))
+            {
+                addedMentions.Add(mentionUserId);
+            }
+        }
+
         comment.Revisions.Add(new TicketCommentRevision
         {
             TenantId = comment.TenantId,
@@ -214,7 +232,18 @@ public static class CollaborationEndpoints
         comment.Body = content.Html;
         comment.BodyPlainText = content.PlainText;
         comment.EditedAt = DateTimeOffset.UtcNow;
-        TicketEndpoints.AddAudit(dbContext, httpContext, access.Ticket, "ticket.comment.edited", "A comment was edited.");
+        var audit = TicketEndpoints.AddAudit(dbContext, httpContext, access.Ticket, "ticket.comment.edited", "A comment was edited.");
+        await notificationService.AddAsync(new NotificationMessage(
+            access.Ticket.TenantId,
+            addedMentions,
+            userId,
+            NotificationType.UserMentioned,
+            access.Ticket.ProjectId,
+            access.Ticket.Id,
+            $"{audit.Id}:mention",
+            $"You were mentioned on {access.Ticket.Key}.",
+            $"/app/tickets/{access.Ticket.Id}",
+            access.Ticket.Id.ToString()), cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
         return TypedResults.Ok(ToResponse(comment, null));
     }
@@ -466,7 +495,7 @@ public static class CollaborationEndpoints
     private sealed record TicketAccess(Ticket? Ticket, TenantAuthorization? Authorization, IResult? Error);
 }
 
-public sealed record CreateCommentRequest(string Body, IReadOnlyCollection<Guid> MentionUserIds);
+public sealed record CreateCommentRequest(string Body, IReadOnlyCollection<Guid>? MentionUserIds = null);
 
 public sealed record EditCommentRequest(string Body);
 

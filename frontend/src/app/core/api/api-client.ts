@@ -83,6 +83,10 @@ export class ApiClient {
     return this.http.get<Project[]>('/api/projects');
   }
 
+  project(projectId: string) {
+    return this.http.get<Project>(`/api/projects/${projectId}`);
+  }
+
   createProject(request: {
     key: string;
     name: string;

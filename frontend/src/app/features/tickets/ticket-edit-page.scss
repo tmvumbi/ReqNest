@@ -1,0 +1,60 @@
+.edit-wrap {
+  max-width: 52rem;
+  margin-inline: auto;
+}
+.back-link {
+  display: inline-block;
+  margin-bottom: 0.6rem;
+  color: var(--app-text-muted);
+  font-size: 0.8rem;
+  text-decoration: none;
+}
+.back-link:hover {
+  color: var(--p-primary-color);
+}
+.ticket-form {
+  display: grid;
+  gap: 1rem;
+}
+.field {
+  display: grid;
+  gap: 0.35rem;
+}
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+}
+label,
+.field-label {
+  color: var(--app-text-muted);
+  font-size: 0.76rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+input,
+textarea,
+p-select,
+p-editor {
+  width: 100%;
+}
+textarea,
+input[type='datetime-local'] {
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--app-border-strong);
+  border-radius: 0.5rem;
+  background: var(--app-surface);
+  color: var(--app-text);
+}
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--app-border);
+}
+@media (max-width: 620px) {
+  .field-row {
+    grid-template-columns: 1fr;
+  }
+}

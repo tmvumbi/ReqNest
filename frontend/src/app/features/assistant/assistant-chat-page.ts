@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { map } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { AssistantDockService } from '../../core/assistant/assistant-dock.service';
 import { I18nService } from '../../core/i18n/i18n.service';
@@ -28,7 +30,7 @@ import { ChatPanel } from './chat-panel';
         </button>
       </header>
       <div class="chat-body content-panel">
-        <app-chat-panel [conversationId]="conversationId" (titleChanged)="title.set($event)" />
+        <app-chat-panel [conversationId]="conversationId()" (titleChanged)="title.set($event)" />
       </div>
     </div>
   `,
@@ -81,7 +83,12 @@ export class AssistantChatPage {
   private readonly dock = inject(AssistantDockService);
   private readonly router = inject(Router);
   readonly i18n = inject(I18nService);
-  readonly conversationId = inject(ActivatedRoute).snapshot.paramMap.get('conversationId')!;
+  // Signal so the chat panel reloads when navigating between conversations
+  // (the router reuses this component when only the param changes).
+  readonly conversationId = toSignal(
+    inject(ActivatedRoute).paramMap.pipe(map((params) => params.get('conversationId')!)),
+    { requireSync: true },
+  );
   readonly title = signal('');
 
   text(en: string, fr: string): string {
@@ -89,7 +96,7 @@ export class AssistantChatPage {
   }
 
   float(): void {
-    this.dock.openFloating(this.conversationId, this.title());
+    this.dock.openFloating(this.conversationId(), this.title());
     void this.router.navigate(['/app/assistant']);
   }
 }
