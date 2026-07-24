@@ -1,0 +1,94 @@
+<main>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="ReNest home">
+      <img src="/branding/renest-logo-light.png" alt="" />
+      <span><strong>Re</strong>Nest</span>
+    </a>
+
+    <div class="language-switcher" [attr.aria-label]="text('Language', 'Langue')">
+      <button
+        type="button"
+        [class.active]="i18n.language() === 'English'"
+        [attr.aria-pressed]="i18n.language() === 'English'"
+        (click)="i18n.setLanguage('English')"
+      >
+        English
+      </button>
+      <span aria-hidden="true"></span>
+      <button
+        type="button"
+        [class.active]="i18n.language() === 'French'"
+        [attr.aria-pressed]="i18n.language() === 'French'"
+        (click)="i18n.setLanguage('French')"
+      >
+        Français
+      </button>
+    </div>
+  </header>
+
+  <section class="selector" aria-labelledby="selector-title">
+    <div class="intro">
+      <p class="eyebrow">{{ text('One home. Two focused workspaces.', 'Un accueil. Deux espaces dédiés.') }}</p>
+      <h1 id="selector-title">{{ text('Where would you like to go?', 'Où souhaitez-vous aller ?') }}</h1>
+      <p>
+        {{
+          text(
+            'Choose the ReNest workspace that matches what you need to do today.',
+            "Choisissez l'espace ReNest qui correspond à ce que vous souhaitez accomplir aujourd'hui."
+          )
+        }}
+      </p>
+    </div>
+
+    <div class="product-grid">
+      <a class="product-card support-card" routerLink="/support">
+        <span class="card-icon" aria-hidden="true">
+          <app-icon name="tickets" [size]="34" />
+        </span>
+        <span class="card-copy">
+          <span class="card-label">{{ text('Customer service', 'Service client') }}</span>
+          <strong>ReNest Support</strong>
+          <span>
+            {{
+              text(
+                'Manage requests, support tickets, knowledge, and service workflows.',
+                'Gérez les demandes, les tickets, les connaissances et les flux de service.'
+              )
+            }}
+          </span>
+        </span>
+        <span class="card-action">
+          {{ text('Open Support', 'Ouvrir Support') }}
+          <span aria-hidden="true">→</span>
+        </span>
+      </a>
+
+      <a class="product-card projects-card" href="https://projects.renest-project.online/">
+        <span class="card-icon" aria-hidden="true">
+          <app-icon name="projects" [size]="34" />
+        </span>
+        <span class="card-copy">
+          <span class="card-label">{{ text('Project delivery', 'Pilotage de projets') }}</span>
+          <strong>ReNest Projects</strong>
+          <span>
+            {{
+              text(
+                'Plan projects, coordinate tasks, collaborate with your team, and report progress.',
+                "Planifiez les projets, coordonnez les tâches, collaborez et suivez l'avancement."
+              )
+            }}
+          </span>
+        </span>
+        <span class="card-action">
+          {{ text('Open Projects', 'Ouvrir Projects') }}
+          <span aria-hidden="true">→</span>
+        </span>
+      </a>
+    </div>
+  </section>
+
+  <footer>
+    <span>© 2026 ReNest.</span>
+    <span>{{ text('Calm tools for teams that care.', 'Des outils sereins pour les équipes engagées.') }}</span>
+  </footer>
+</main>

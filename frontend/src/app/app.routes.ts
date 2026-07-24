@@ -10,6 +10,13 @@ export const routes: Routes = [
   {
     path: '',
     loadComponent: () =>
+      import('./features/public/product-selector/product-selector-page').then(
+        (module) => module.ProductSelectorPage,
+      ),
+  },
+  {
+    path: 'support',
+    loadComponent: () =>
       import('./features/public/landing-page/landing-page').then((module) => module.LandingPage),
   },
   {
